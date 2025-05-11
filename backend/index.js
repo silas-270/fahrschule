@@ -36,6 +36,15 @@ app.use((req, res, next) => {
     next();
 });
 
+// Security Headers Middleware
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    next();
+});
+
 // init DB
 (async () => {
     const db = await openDb();
@@ -43,13 +52,15 @@ app.use((req, res, next) => {
         id INTEGER PRIMARY KEY,
         username TEXT UNIQUE,
         password TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        last_login DATETIME,
+        failed_attempts INTEGER DEFAULT 0
     )`);
 
     // Testuser nur erstellen, wenn keine Benutzer existieren
     const userCount = await db.get('SELECT COUNT(*) as count FROM users');
     if (userCount.count === 0) {
-        const hash = await bcrypt.hash('passwort123', 10);
+        const hash = await bcrypt.hash('passwort123', 12); // Erhöhte Salt-Runden für bessere Sicherheit
         await db.run('INSERT INTO users (username, password) VALUES (?, ?)', ['test', hash]);
         console.log('Testnutzer erstellt: test / passwort123');
     }
@@ -132,19 +143,40 @@ app.post('/login', async (req, res) => {
         const user = await db.get('SELECT * FROM users WHERE username = ?', [username]);
 
         if (!user) {
+            // Verzögerung bei fehlgeschlagenem Login
+            await new Promise(resolve => setTimeout(resolve, 1000));
             return res.status(401).json({
                 success: false,
                 message: 'Ungültige Anmeldedaten'
             });
         }
 
+        // Prüfe auf zu viele fehlgeschlagene Versuche
+        if (user.failed_attempts >= 5) {
+            const lastAttempt = new Date(user.last_login);
+            const lockoutTime = 15 * 60 * 1000; // 15 Minuten
+            if (Date.now() - lastAttempt < lockoutTime) {
+                return res.status(429).json({
+                    success: false,
+                    message: 'Zu viele fehlgeschlagene Versuche. Bitte versuchen Sie es später erneut.'
+                });
+            }
+            // Reset failed attempts after lockout period
+            await db.run('UPDATE users SET failed_attempts = 0 WHERE id = ?', [user.id]);
+        }
+
         const match = await bcrypt.compare(password, user.password);
         if (!match) {
+            // Erhöhe fehlgeschlagene Versuche
+            await db.run('UPDATE users SET failed_attempts = failed_attempts + 1, last_login = CURRENT_TIMESTAMP WHERE id = ?', [user.id]);
             return res.status(401).json({
                 success: false,
                 message: 'Ungültige Anmeldedaten'
             });
         }
+
+        // Reset failed attempts and update last login on successful login
+        await db.run('UPDATE users SET failed_attempts = 0, last_login = CURRENT_TIMESTAMP WHERE id = ?', [user.id]);
 
         res.json({
             success: true,

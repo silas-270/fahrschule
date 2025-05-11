@@ -85,20 +85,6 @@
             background: #f8d7da;
             color: #721c24;
         }
-
-        .register-link {
-            text-align: center;
-            margin-top: 1rem;
-        }
-
-        .register-link a {
-            color: #667eea;
-            text-decoration: none;
-        }
-
-        .register-link a:hover {
-            text-decoration: underline;
-        }
     </style>
 </head>
 <body>
@@ -114,13 +100,18 @@
             <button type="submit">Einloggen</button>
         </form>
         <div id="message" class="message" style="display: none;"></div>
-        <div class="register-link">
-            <p>Noch kein Konto? <a href="#" id="register-link">Registrieren</a></p>
-        </div>
     </div>
 
     <script>
         const API_URL = 'https://fahrschule-production.up.railway.app';
+
+        // Prüfe ob bereits eine Session existiert
+        window.addEventListener('load', () => {
+            const session = localStorage.getItem('session');
+            if (session) {
+                window.location.href = 'dashboard.html';
+            }
+        });
 
         function showMessage(message, isError = false) {
             const messageDiv = document.getElementById('message');
@@ -146,9 +137,16 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    showMessage('Login erfolgreich!');
-                    // Hier können Sie nach erfolgreichem Login weiterleiten
-                    // window.location.href = '/dashboard.html';
+                    // Speichere Session-Informationen
+                    localStorage.setItem('session', JSON.stringify({
+                        username: data.user.username,
+                        timestamp: Date.now()
+                    }));
+                    
+                    showMessage('Login erfolgreich! Weiterleitung...');
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 1000);
                 } else {
                     showMessage(data.message || 'Login fehlgeschlagen', true);
                 }
@@ -156,13 +154,6 @@
                 showMessage('Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.', true);
                 console.error('Login error:', error);
             }
-        });
-
-        document.getElementById('register-link').addEventListener('click', (e) => {
-            e.preventDefault();
-            // Hier können Sie zur Registrierungsseite weiterleiten
-            // window.location.href = '/register.html';
-            showMessage('Registrierung wird bald verfügbar sein!');
         });
     </script>
 </body>
