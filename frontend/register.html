@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fahrschule Login</title>
+    <title>Fahrschule Registrierung</title>
     <style>
         * {
             margin: 0;
@@ -86,36 +86,51 @@
             color: #721c24;
         }
 
-        .register-link {
+        .login-link {
             text-align: center;
             margin-top: 1rem;
         }
 
-        .register-link a {
+        .login-link a {
             color: #667eea;
             text-decoration: none;
         }
 
-        .register-link a:hover {
+        .login-link a:hover {
             text-decoration: underline;
+        }
+
+        .password-requirements {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 0.5rem;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Fahrschule Login</h1>
-        <form id="login-form">
+        <h1>Fahrschule Registrierung</h1>
+        <form id="register-form">
             <div class="form-group">
                 <input type="text" id="username" placeholder="Benutzername" required />
+                <div class="password-requirements">
+                    Benutzername muss zwischen 3 und 20 Zeichen lang sein und darf nur Buchstaben, Zahlen und Unterstriche enthalten.
+                </div>
             </div>
             <div class="form-group">
                 <input type="password" id="password" placeholder="Passwort" required />
+                <div class="password-requirements">
+                    Passwort muss mindestens 8 Zeichen lang sein.
+                </div>
             </div>
-            <button type="submit">Einloggen</button>
+            <div class="form-group">
+                <input type="password" id="confirm-password" placeholder="Passwort bestätigen" required />
+            </div>
+            <button type="submit">Registrieren</button>
         </form>
         <div id="message" class="message" style="display: none;"></div>
-        <div class="register-link">
-            <p>Noch kein Konto? <a href="#" id="register-link">Registrieren</a></p>
+        <div class="login-link">
+            <p>Bereits registriert? <a href="index.html">Zum Login</a></p>
         </div>
     </div>
 
@@ -129,13 +144,19 @@
             messageDiv.style.display = 'block';
         }
 
-        document.getElementById('login-form').addEventListener('submit', async (e) => {
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+
+            if (password !== confirmPassword) {
+                showMessage('Die Passwörter stimmen nicht überein', true);
+                return;
+            }
 
             try {
-                const response = await fetch(`${API_URL}/login`, {
+                const response = await fetch(`${API_URL}/register`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -146,24 +167,18 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    showMessage('Login erfolgreich!');
-                    // Hier können Sie nach erfolgreichem Login weiterleiten
-                    // window.location.href = '/dashboard.html';
+                    showMessage('Registrierung erfolgreich! Sie werden zum Login weitergeleitet...');
+                    setTimeout(() => {
+                        window.location.href = 'index.html';
+                    }, 2000);
                 } else {
-                    showMessage(data.message || 'Login fehlgeschlagen', true);
+                    showMessage(data.message || 'Registrierung fehlgeschlagen', true);
                 }
             } catch (error) {
                 showMessage('Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.', true);
-                console.error('Login error:', error);
+                console.error('Registrierungsfehler:', error);
             }
-        });
-
-        document.getElementById('register-link').addEventListener('click', (e) => {
-            e.preventDefault();
-            // Hier können Sie zur Registrierungsseite weiterleiten
-            // window.location.href = '/register.html';
-            showMessage('Registrierung wird bald verfügbar sein!');
         });
     </script>
 </body>
-</html>
+</html> 
