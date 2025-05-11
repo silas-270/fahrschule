@@ -1,7 +1,7 @@
 import sqlite3 from 'sqlite3';
 import { open } from 'sqlite';
 
-// Öffne (oder erstelle) SQLite-Datenbank
+// Öffnet die Datenbank mit sqlite3 als Treiber
 export async function openDb() {
   return open({
     filename: './backend/users.db',
