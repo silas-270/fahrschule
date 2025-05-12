@@ -8,6 +8,7 @@ app.use(express.json());
 app.use(cors());
 
 const PORT = process.env.PORT || 3000;
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'your-secure-admin-token'; // In Railway als Umgebungsvariable setzen
 
 // Middleware für Rate Limiting
 const rateLimit = new Map();
@@ -44,6 +45,18 @@ app.use((req, res, next) => {
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     next();
 });
+
+// Middleware für Admin-Authentifizierung
+const adminAuth = (req, res, next) => {
+    const token = req.headers['admin-token'];
+    if (token !== ADMIN_TOKEN) {
+        return res.status(401).json({
+            success: false,
+            message: 'Nicht autorisiert'
+        });
+    }
+    next();
+};
 
 // init DB
 (async () => {
@@ -188,6 +201,147 @@ app.post('/login', async (req, res) => {
         });
     } catch (error) {
         console.error('Login-Fehler:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Ein Fehler ist aufgetreten'
+        });
+    }
+});
+
+// Admin-Routen
+// Alle Benutzer auflisten
+app.get('/admin/users', adminAuth, async (req, res) => {
+    try {
+        const db = await openDb();
+        const users = await db.all('SELECT id, username, created_at, last_login FROM users');
+        res.json({
+            success: true,
+            users: users
+        });
+    } catch (error) {
+        console.error('Fehler beim Abrufen der Benutzer:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Ein Fehler ist aufgetreten'
+        });
+    }
+});
+
+// Neuen Benutzer erstellen
+app.post('/admin/users', adminAuth, async (req, res) => {
+    try {
+        const { username, password } = req.body;
+
+        if (!username || !password) {
+            return res.status(400).json({
+                success: false,
+                message: 'Benutzername und Passwort sind erforderlich'
+            });
+        }
+
+        if (username.length < 3 || username.length > 20) {
+            return res.status(400).json({
+                success: false,
+                message: 'Benutzername muss zwischen 3 und 20 Zeichen lang sein'
+            });
+        }
+
+        if (password.length < 8) {
+            return res.status(400).json({
+                success: false,
+                message: 'Passwort muss mindestens 8 Zeichen lang sein'
+            });
+        }
+
+        const db = await openDb();
+        
+        // Prüfen ob Benutzer bereits existiert
+        const existingUser = await db.get('SELECT * FROM users WHERE username = ?', [username]);
+        if (existingUser) {
+            return res.status(400).json({
+                success: false,
+                message: 'Dieser Benutzername ist bereits vergeben'
+            });
+        }
+
+        const hash = await bcrypt.hash(password, 12);
+        await db.run('INSERT INTO users (username, password) VALUES (?, ?)', [username, hash]);
+
+        res.status(201).json({
+            success: true,
+            message: 'Benutzer erfolgreich erstellt'
+        });
+    } catch (error) {
+        console.error('Fehler beim Erstellen des Benutzers:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Ein Fehler ist aufgetreten'
+        });
+    }
+});
+
+// Benutzer löschen
+app.delete('/admin/users/:id', adminAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const db = await openDb();
+        
+        const result = await db.run('DELETE FROM users WHERE id = ?', [id]);
+        
+        if (result.changes === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Benutzer nicht gefunden'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Benutzer erfolgreich gelöscht'
+        });
+    } catch (error) {
+        console.error('Fehler beim Löschen des Benutzers:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Ein Fehler ist aufgetreten'
+        });
+    }
+});
+
+// Passwort zurücksetzen
+app.post('/admin/users/:id/reset-password', adminAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { newPassword } = req.body;
+
+        if (!newPassword || newPassword.length < 8) {
+            return res.status(400).json({
+                success: false,
+                message: 'Neues Passwort muss mindestens 8 Zeichen lang sein'
+            });
+        }
+
+        const db = await openDb();
+        const hash = await bcrypt.hash(newPassword, 12);
+        
+        const result = await db.run(
+            'UPDATE users SET password = ?, failed_attempts = 0 WHERE id = ?',
+            [hash, id]
+        );
+
+        if (result.changes === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Benutzer nicht gefunden'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Passwort erfolgreich zurückgesetzt'
+        });
+    } catch (error) {
+        console.error('Fehler beim Zurücksetzen des Passworts:', error);
         res.status(500).json({
             success: false,
             message: 'Ein Fehler ist aufgetreten'
