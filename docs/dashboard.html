@@ -15,26 +15,27 @@
         body {
             min-height: 100vh;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 2rem;
+            padding: 1rem;
         }
 
         .container {
             background: white;
-            padding: 2rem;
+            padding: 1rem;
             border-radius: 10px;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-            max-width: 800px;
+            max-width: 600px;
             margin: 0 auto;
         }
 
         h1 {
             color: #333;
-            margin-bottom: 1.5rem;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
         }
 
         .welcome-message {
-            margin-bottom: 2rem;
-            padding: 1rem;
+            margin-bottom: 1rem;
+            padding: 0.8rem;
             background: #f8f9fa;
             border-radius: 5px;
         }
@@ -48,10 +49,125 @@
             font-size: 1rem;
             cursor: pointer;
             transition: background 0.3s ease;
+            margin-bottom: 1rem;
         }
 
         .logout-button:hover {
             background: #c82333;
+        }
+
+        .calendar-container {
+            margin-top: 1rem;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .week-navigation {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .nav-button {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #333;
+            padding: 0.5rem;
+        }
+
+        .nav-button:hover {
+            color: #667eea;
+        }
+
+        .week-title {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .day-card {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+        }
+
+        .day-header {
+            font-weight: bold;
+            margin-bottom: 0.8rem;
+            color: #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .date {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .appointment {
+            background: #e3f2fd;
+            padding: 0.8rem;
+            margin-bottom: 0.5rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+
+        .appointment.suggested {
+            background: #fff3cd;
+        }
+
+        .appointment.accepted {
+            background: #d4edda;
+        }
+
+        .appointment.rejected {
+            background: #f8d7da;
+        }
+
+        .appointment-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .appointment-button {
+            padding: 0.3rem 0.6rem;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .accept-button {
+            background: #28a745;
+            color: white;
+        }
+
+        .reject-button {
+            background: #dc3545;
+            color: white;
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 0.5rem;
+            }
+
+            .container {
+                padding: 0.8rem;
+            }
+
+            h1 {
+                font-size: 1.3rem;
+            }
         }
     </style>
 </head>
@@ -62,9 +178,25 @@
             Willkommen, <span id="username"></span>!
         </div>
         <button class="logout-button" onclick="logout()">Abmelden</button>
+
+        <div class="calendar-container">
+            <div class="calendar-header">
+                <h2>Terminübersicht</h2>
+                <div class="week-navigation">
+                    <button class="nav-button" onclick="changeWeek(-1)">←</button>
+                    <span class="week-title" id="weekTitle"></span>
+                    <button class="nav-button" onclick="changeWeek(1)">→</button>
+                </div>
+            </div>
+            <div id="weekView">
+                <!-- Wird dynamisch mit JavaScript gefüllt -->
+            </div>
+        </div>
     </div>
 
     <script>
+        let currentWeekOffset = 0;
+
         // Session-Überprüfung
         window.addEventListener('load', () => {
             const session = localStorage.getItem('session');
@@ -76,6 +208,7 @@
             try {
                 const sessionData = JSON.parse(session);
                 document.getElementById('username').textContent = sessionData.username;
+                initializeCalendar();
             } catch (error) {
                 console.error('Session error:', error);
                 logout();
@@ -85,6 +218,110 @@
         function logout() {
             localStorage.removeItem('session');
             window.location.href = 'index.html';
+        }
+
+        function formatDate(date) {
+            return `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()}`;
+        }
+
+        function updateWeekTitle(startDate, endDate) {
+            const weekTitle = document.getElementById('weekTitle');
+            weekTitle.textContent = `${formatDate(startDate)} - ${formatDate(endDate)}`;
+        }
+
+        function changeWeek(offset) {
+            currentWeekOffset += offset;
+            initializeCalendar();
+        }
+
+        function initializeCalendar() {
+            const weekView = document.getElementById('weekView');
+            weekView.innerHTML = ''; // Clear existing content
+
+            const today = new Date();
+            const startDate = new Date(today);
+            startDate.setDate(today.getDate() + (currentWeekOffset * 7));
+            
+            const endDate = new Date(startDate);
+            endDate.setDate(startDate.getDate() + 6);
+            
+            updateWeekTitle(startDate, endDate);
+
+            const days = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+
+            // Erstelle Karten für die nächsten 7 Tage
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(startDate);
+                date.setDate(startDate.getDate() + i);
+                
+                const dayCard = document.createElement('div');
+                dayCard.className = 'day-card';
+                
+                const dayHeader = document.createElement('div');
+                dayHeader.className = 'day-header';
+                
+                const dayName = document.createElement('span');
+                dayName.textContent = days[date.getDay()];
+                
+                const dateSpan = document.createElement('span');
+                dateSpan.className = 'date';
+                dateSpan.textContent = formatDate(date);
+                
+                dayHeader.appendChild(dayName);
+                dayHeader.appendChild(dateSpan);
+                dayCard.appendChild(dayHeader);
+                
+                // Beispiel-Termine (später durch echte Daten ersetzen)
+                if (i === 1) {
+                    const appointment = createAppointment('10:00', 'Überlandfahrt', 'suggested');
+                    dayCard.appendChild(appointment);
+                }
+                if (i === 3) {
+                    const appointment = createAppointment('14:00', 'Stadtfahrt', 'accepted');
+                    dayCard.appendChild(appointment);
+                }
+                
+                weekView.appendChild(dayCard);
+            }
+        }
+
+        function createAppointment(time, type, status) {
+            const appointment = document.createElement('div');
+            appointment.className = `appointment ${status}`;
+            
+            const content = document.createElement('div');
+            content.textContent = `${time} - ${type}`;
+            appointment.appendChild(content);
+
+            if (status === 'suggested') {
+                const actions = document.createElement('div');
+                actions.className = 'appointment-actions';
+                
+                const acceptButton = document.createElement('button');
+                acceptButton.className = 'appointment-button accept-button';
+                acceptButton.textContent = 'Annehmen';
+                acceptButton.onclick = () => handleAppointmentResponse(appointment, 'accepted');
+                
+                const rejectButton = document.createElement('button');
+                rejectButton.className = 'appointment-button reject-button';
+                rejectButton.textContent = 'Ablehnen';
+                rejectButton.onclick = () => handleAppointmentResponse(appointment, 'rejected');
+                
+                actions.appendChild(acceptButton);
+                actions.appendChild(rejectButton);
+                appointment.appendChild(actions);
+            }
+
+            return appointment;
+        }
+
+        function handleAppointmentResponse(appointment, newStatus) {
+            // Hier später die API-Aufrufe implementieren
+            appointment.className = `appointment ${newStatus}`;
+            const actions = appointment.querySelector('.appointment-actions');
+            if (actions) {
+                actions.remove();
+            }
         }
     </script>
 </body>
