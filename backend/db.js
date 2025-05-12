@@ -9,33 +9,67 @@ const pool = new Pool({
     }
 });
 
+// Teste die Datenbankverbindung
+pool.on('error', (err) => {
+    console.error('Unerwarteter Fehler bei der Datenbankverbindung:', err);
+});
+
 // Wrapper für die Datenbankoperationen
 export async function openDb() {
+    try {
+        // Teste die Verbindung
+        await pool.query('SELECT NOW()');
+        console.log('Datenbankverbindung erfolgreich hergestellt');
+    } catch (error) {
+        console.error('Fehler bei der Datenbankverbindung:', error);
+        throw new Error('Datenbankverbindung fehlgeschlagen: ' + error.message);
+    }
+
     return {
         // Führt eine SQL-Abfrage aus und gibt alle Ergebnisse zurück
         all: async (sql, params = []) => {
-            const result = await pool.query(sql, params);
-            return result.rows;
+            try {
+                const result = await pool.query(sql, params);
+                return result.rows;
+            } catch (error) {
+                console.error('Fehler bei Datenbankabfrage (all):', error);
+                throw error;
+            }
         },
 
         // Führt eine SQL-Abfrage aus und gibt das erste Ergebnis zurück
         get: async (sql, params = []) => {
-            const result = await pool.query(sql, params);
-            return result.rows[0];
+            try {
+                const result = await pool.query(sql, params);
+                return result.rows[0];
+            } catch (error) {
+                console.error('Fehler bei Datenbankabfrage (get):', error);
+                throw error;
+            }
         },
 
         // Führt eine SQL-Abfrage aus und gibt das Ergebnis zurück
         run: async (sql, params = []) => {
-            const result = await pool.query(sql, params);
-            return {
-                changes: result.rowCount,
-                lastID: result.rows[0]?.id
-            };
+            try {
+                const result = await pool.query(sql, params);
+                return {
+                    changes: result.rowCount,
+                    lastID: result.rows[0]?.id
+                };
+            } catch (error) {
+                console.error('Fehler bei Datenbankabfrage (run):', error);
+                throw error;
+            }
         },
 
         // Führt eine SQL-Abfrage aus
         exec: async (sql) => {
-            await pool.query(sql);
+            try {
+                await pool.query(sql);
+            } catch (error) {
+                console.error('Fehler bei Datenbankabfrage (exec):', error);
+                throw error;
+            }
         }
     };
 }

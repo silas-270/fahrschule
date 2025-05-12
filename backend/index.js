@@ -8,7 +8,23 @@ app.use(express.json());
 app.use(cors());
 
 const PORT = process.env.PORT || 3000;
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'your-secure-admin-token'; // In Railway als Umgebungsvariable setzen
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'your-secure-admin-token';
+
+// Logging Middleware
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+    next();
+});
+
+// Error Handling Middleware
+app.use((err, req, res, next) => {
+    console.error('Fehler:', err);
+    res.status(500).json({
+        success: false,
+        message: 'Ein interner Fehler ist aufgetreten',
+        error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
+});
 
 // Middleware für Rate Limiting
 const rateLimit = new Map();
@@ -60,22 +76,29 @@ const adminAuth = (req, res, next) => {
 
 // init DB
 (async () => {
-    const db = await openDb();
-    await db.exec(`CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY,
-        username TEXT UNIQUE,
-        password TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        last_login DATETIME,
-        failed_attempts INTEGER DEFAULT 0
-    )`);
+    try {
+        console.log('Initialisiere Datenbank...');
+        const db = await openDb();
+        await db.exec(`CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            username TEXT UNIQUE,
+            password TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_login TIMESTAMP,
+            failed_attempts INTEGER DEFAULT 0
+        )`);
 
-    // Testuser nur erstellen, wenn keine Benutzer existieren
-    const userCount = await db.get('SELECT COUNT(*) as count FROM users');
-    if (userCount.count === 0) {
-        const hash = await bcrypt.hash('passwort123', 12); // Erhöhte Salt-Runden für bessere Sicherheit
-        await db.run('INSERT INTO users (username, password) VALUES (?, ?)', ['test', hash]);
-        console.log('Testnutzer erstellt: test / passwort123');
+        // Testuser nur erstellen, wenn keine Benutzer existieren
+        const userCount = await db.get('SELECT COUNT(*) as count FROM users');
+        if (userCount.count === 0) {
+            const hash = await bcrypt.hash('passwort123', 12);
+            await db.run('INSERT INTO users (username, password) VALUES ($1, $2)', ['test', hash]);
+            console.log('Testnutzer erstellt: test / passwort123');
+        }
+        console.log('Datenbank-Initialisierung abgeschlossen');
+    } catch (error) {
+        console.error('Fehler bei der Datenbank-Initialisierung:', error);
+        process.exit(1); // Beende den Prozess bei Datenbankfehlern
     }
 })();
 
@@ -153,7 +176,7 @@ app.post('/login', async (req, res) => {
         }
 
         const db = await openDb();
-        const user = await db.get('SELECT * FROM users WHERE username = ?', [username]);
+        const user = await db.get('SELECT * FROM users WHERE username = $1', [username]);
 
         if (!user) {
             // Verzögerung bei fehlgeschlagenem Login
@@ -175,13 +198,13 @@ app.post('/login', async (req, res) => {
                 });
             }
             // Reset failed attempts after lockout period
-            await db.run('UPDATE users SET failed_attempts = 0 WHERE id = ?', [user.id]);
+            await db.run('UPDATE users SET failed_attempts = 0 WHERE id = $1', [user.id]);
         }
 
         const match = await bcrypt.compare(password, user.password);
         if (!match) {
             // Erhöhe fehlgeschlagene Versuche
-            await db.run('UPDATE users SET failed_attempts = failed_attempts + 1, last_login = CURRENT_TIMESTAMP WHERE id = ?', [user.id]);
+            await db.run('UPDATE users SET failed_attempts = failed_attempts + 1, last_login = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
             return res.status(401).json({
                 success: false,
                 message: 'Ungültige Anmeldedaten'
@@ -189,7 +212,7 @@ app.post('/login', async (req, res) => {
         }
 
         // Reset failed attempts and update last login on successful login
-        await db.run('UPDATE users SET failed_attempts = 0, last_login = CURRENT_TIMESTAMP WHERE id = ?', [user.id]);
+        await db.run('UPDATE users SET failed_attempts = 0, last_login = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
 
         res.json({
             success: true,
@@ -256,7 +279,7 @@ app.post('/admin/users', adminAuth, async (req, res) => {
         const db = await openDb();
         
         // Prüfen ob Benutzer bereits existiert
-        const existingUser = await db.get('SELECT * FROM users WHERE username = ?', [username]);
+        const existingUser = await db.get('SELECT * FROM users WHERE username = $1', [username]);
         if (existingUser) {
             return res.status(400).json({
                 success: false,
@@ -265,7 +288,7 @@ app.post('/admin/users', adminAuth, async (req, res) => {
         }
 
         const hash = await bcrypt.hash(password, 12);
-        await db.run('INSERT INTO users (username, password) VALUES (?, ?)', [username, hash]);
+        await db.run('INSERT INTO users (username, password) VALUES ($1, $2)', [username, hash]);
 
         res.status(201).json({
             success: true,
@@ -286,7 +309,7 @@ app.delete('/admin/users/:id', adminAuth, async (req, res) => {
         const { id } = req.params;
         const db = await openDb();
         
-        const result = await db.run('DELETE FROM users WHERE id = ?', [id]);
+        const result = await db.run('DELETE FROM users WHERE id = $1', [id]);
         
         if (result.changes === 0) {
             return res.status(404).json({
@@ -325,7 +348,7 @@ app.post('/admin/users/:id/reset-password', adminAuth, async (req, res) => {
         const hash = await bcrypt.hash(newPassword, 12);
         
         const result = await db.run(
-            'UPDATE users SET password = ?, failed_attempts = 0 WHERE id = ?',
+            'UPDATE users SET password = $1, failed_attempts = 0 WHERE id = $2',
             [hash, id]
         );
 
@@ -349,6 +372,7 @@ app.post('/admin/users/:id/reset-password', adminAuth, async (req, res) => {
     }
 });
 
+// Starte den Server
 app.listen(PORT, () => {
     console.log(`Backend läuft auf Port ${PORT}`);
 });
