@@ -118,6 +118,11 @@
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
             border: 1px solid #424242;
             color: #F3F3F3;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 60px;
+            position: relative;
         }
 
         .appointment.suggested {
@@ -147,40 +152,50 @@
             color: #BDBDBD;
         }
 
-        .appointment-actions {
-            display: flex;
-            gap: 0.8rem;
-            margin-top: 0.8rem;
+        .appointment-info {
+            font-size: 16px;
+            color: #F3F3F3;
+            position: relative;
+            transform: translateY(0);
         }
 
-        .accept-btn, .reject-btn {
-            padding: 0.4rem 0.8rem;
+        .appointment-info strong {
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .appointment-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .accept-button, .reject-button {
+            font-family: 'Roboto', sans-serif;
+            font-size: 13px;
+            padding: 3px 6px;
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 0.8rem;
-            transition: all 0.2s ease;
-            flex: 1;
+            transition: background-color 0.2s;
         }
 
-        .accept-btn {
-            background: #424242;
-            color: #4CAF50;
+        .accept-button {
+            background-color: #424242;
+            color: #81c784;
         }
 
-        .accept-btn:hover {
-            background: #4CAF50;
-            color: #F3F3F3;
+        .accept-button:hover {
+            background-color: #4f4f4f;
         }
 
-        .reject-btn {
-            background: #424242;
-            color: #F44336;
+        .reject-button {
+            background-color: #424242;
+            color: #e57373;
         }
 
-        .reject-btn:hover {
-            background: #F44336;
-            color: #F3F3F3;
+        .reject-button:hover {
+            background-color: #4f4f4f;
         }
 
         .no-appointments {
@@ -253,6 +268,10 @@
             width: 20px;
             height: 20px;
             fill: currentColor;
+        }
+
+        #weekTitle {
+            display: none;
         }
 
         @media (max-width: 480px) {

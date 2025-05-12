@@ -259,6 +259,14 @@ export async function openDb() {
                 const appointmentsResult = await client.query('SELECT * FROM appointments');
                 console.log('Appointments in database:', appointmentsResult.rows);
 
+                // Korrigiere das Datum des Termins
+                await client.query(`
+                    UPDATE appointments 
+                    SET date = '2025-05-12 14:00:00'::timestamp 
+                    WHERE id = 1
+                `);
+                console.log('Termin-Datum wurde korrigiert');
+
                 // Überprüfe die spezifische Abfrage
                 const testQuery = `
                     SELECT a.*, u.username as student_name

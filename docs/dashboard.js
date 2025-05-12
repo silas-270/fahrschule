@@ -96,6 +96,9 @@ function changeWeek(offset) {
     initializeCalendar();
 }
 
+// Globale Variable für die aktuelle Woche
+let currentWeekData = null;
+
 function initializeCalendar() {
     const appointmentsContainer = document.getElementById('appointments');
     appointmentsContainer.innerHTML = ''; // Clear existing content
@@ -130,71 +133,75 @@ function initializeCalendar() {
         appointmentsContainer.appendChild(dayContainer);
     }
 
-    // Lade Termine vom Backend
-    fetchAppointments(startDate, endDate).then(appointments => {
-        appointments.forEach(appointment => {
-            const appointmentDate = new Date(appointment.date);
-            const dayIndex = Math.floor((appointmentDate - startDate) / (1000 * 60 * 60 * 24));
-            
-            if (dayIndex >= 0 && dayIndex < 7) {
-                const dayContainer = appointmentsContainer.children[dayIndex];
-                const appointmentElement = createAppointmentElement(appointment);
-                dayContainer.appendChild(appointmentElement);
-            }
+    // Nur Abfragen, wenn sich die Woche geändert hat
+    const weekKey = `${startDate.toISOString()}-${endDate.toISOString()}`;
+    if (currentWeekData?.weekKey === weekKey) {
+        // Verwende die bereits geladenen Daten
+        displayWeekAppointments(appointmentsContainer, startDate, currentWeekData.appointments);
+    } else {
+        // Lade neue Daten
+        fetchAppointments(startDate, endDate).then(appointments => {
+            currentWeekData = {
+                weekKey,
+                appointments
+            };
+            displayWeekAppointments(appointmentsContainer, startDate, appointments);
+        });
+    }
+}
+
+function displayWeekAppointments(container, startDate, appointments) {
+    Array.from(container.children).forEach((dayContainer, index) => {
+        const date = new Date(startDate);
+        date.setDate(startDate.getDate() + index);
+        
+        const dayAppointments = appointments.filter(apt => {
+            const aptDate = new Date(apt.date);
+            return aptDate.toDateString() === date.toDateString();
         });
 
-        // Zeige "Keine Termine" Nachricht für leere Tage
-        Array.from(appointmentsContainer.children).forEach(dayContainer => {
-            if (dayContainer.children.length === 1) { // Nur der Header ist vorhanden
-                const noAppointments = document.createElement('div');
-                noAppointments.className = 'no-appointments';
-                noAppointments.textContent = 'Keine Termine';
-                dayContainer.appendChild(noAppointments);
-            }
+        dayAppointments.forEach(appointment => {
+            const appointmentElement = createAppointmentElement(appointment);
+            dayContainer.appendChild(appointmentElement);
         });
     });
 }
 
+// Erstellt ein Termin-Element
 function createAppointmentElement(appointment) {
-    const appointmentElement = document.createElement('div');
-    appointmentElement.className = `appointment ${appointment.status}`;
+    const element = document.createElement('div');
+    element.className = `appointment ${appointment.status}`;
     
-    const time = document.createElement('div');
-    time.className = 'appointment-time';
-    time.textContent = new Date(appointment.date).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+    const time = new Date(appointment.date).toLocaleTimeString('de-DE', {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
     
-    const type = document.createElement('div');
-    type.className = 'appointment-type';
-    type.textContent = appointment.type;
-    
-    const status = document.createElement('div');
-    status.className = 'appointment-status';
-    status.textContent = getStatusText(appointment.status);
-    
-    appointmentElement.appendChild(time);
-    appointmentElement.appendChild(type);
-    appointmentElement.appendChild(status);
+    const timeAndType = document.createElement('div');
+    timeAndType.className = 'appointment-info';
+    timeAndType.innerHTML = `<strong>${time}</strong> - ${appointment.type}`;
+    element.appendChild(timeAndType);
 
     if (appointment.status === 'suggested') {
         const actions = document.createElement('div');
         actions.className = 'appointment-actions';
         
         const acceptButton = document.createElement('button');
-        acceptButton.className = 'accept-btn';
+        acceptButton.className = 'accept-button';
         acceptButton.textContent = 'Annehmen';
-        acceptButton.onclick = () => handleAppointmentResponse(appointment.id, 'accepted');
+        acceptButton.onclick = () => handleAppointmentResponse(appointment.id, 'accept');
         
         const rejectButton = document.createElement('button');
-        rejectButton.className = 'reject-btn';
+        rejectButton.className = 'reject-button';
         rejectButton.textContent = 'Ablehnen';
-        rejectButton.onclick = () => handleAppointmentResponse(appointment.id, 'rejected');
+        rejectButton.onclick = () => handleAppointmentResponse(appointment.id, 'reject');
         
         actions.appendChild(acceptButton);
         actions.appendChild(rejectButton);
-        appointmentElement.appendChild(actions);
+        element.appendChild(actions);
     }
 
-    return appointmentElement;
+    return element;
 }
 
 function getStatusText(status) {
