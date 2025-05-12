@@ -160,10 +160,13 @@ export async function openDb() {
                     FROM appointments a
                     JOIN users u ON a.student_id = u.id
                     WHERE a.student_id = $1
-                    AND a.date BETWEEN $2 AND $3
+                    AND a.date >= $2::timestamp
+                    AND a.date <= $3::timestamp
                     ORDER BY a.date ASC
                 `;
+                console.log('Executing query with params:', { studentId, startDate, endDate }); // Debug output
                 const result = await client.query(query, [studentId, startDate, endDate]);
+                console.log('Query result:', result.rows); // Debug output
                 return result.rows;
             } catch (error) {
                 console.error('Fehler beim Abrufen der Termine:', error);
