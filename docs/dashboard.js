@@ -38,7 +38,15 @@ function logout() {
 }
 
 function formatDate(date) {
+    // Convert to UTC for API calls
     return date.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+}
+
+function formatDateForDisplay(date) {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = String(date.getFullYear()).slice(-2);
+    return `${day}.${month}.${year}`;
 }
 
 // Funktion zum Abrufen der Termine vom Backend
@@ -127,7 +135,7 @@ function initializeCalendar() {
         dayContainer.className = 'day-container';
         
         const dayHeader = document.createElement('h3');
-        dayHeader.textContent = `${days[date.getDay()]}, ${formatDate(date)}`;
+        dayHeader.textContent = `${days[date.getDay()]}, ${formatDateForDisplay(date)}`;
         dayContainer.appendChild(dayHeader);
         
         appointmentsContainer.appendChild(dayContainer);
@@ -172,6 +180,7 @@ function createAppointmentElement(appointment) {
     const element = document.createElement('div');
     element.className = `appointment ${appointment.status}`;
     
+    // The date is already in German timezone from the backend
     const time = new Date(appointment.date).toLocaleTimeString('de-DE', {
         hour: '2-digit',
         minute: '2-digit'
@@ -238,7 +247,8 @@ async function handleAppointmentResponse(appointmentId, newStatus) {
             throw new Error('Failed to update appointment status');
         }
 
-        showNotification(`Termin ${newStatus === 'accepted' ? 'angenommen' : 'abgelehnt'}`, 'success');
+        const statusMessage = newStatus === 'accept' ? 'angenommen' : 'abgelehnt';
+        showNotification(`Termin ${statusMessage}`, 'success');
         initializeCalendar(); // Aktualisiere die Ansicht
     } catch (error) {
         console.error('Error updating appointment:', error);

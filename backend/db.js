@@ -164,7 +164,10 @@ export async function openDb() {
                 console.log('Alle Benutzer in der Datenbank:', allUsers.rows);
 
                 const query = `
-                    SELECT a.*, u.username as student_name
+                    SELECT 
+                        a.*,
+                        u.username as student_name,
+                        a.date AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Berlin' as date
                     FROM appointments a
                     JOIN users u ON a.student_id = u.id
                     WHERE a.student_id = $1
