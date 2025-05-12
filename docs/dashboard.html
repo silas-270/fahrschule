@@ -268,7 +268,7 @@
 
     <script>
         // Konfiguration
-        const API_URL = 'https://fahrschule-backend.up.railway.app'; // Ersetze dies mit deiner Railway-URL
+        const API_URL = 'https://fahrschule-production.up.railway.app'; // Ersetze dies mit deiner Railway-URL
         let currentWeekStart = new Date();
         currentWeekStart.setHours(0, 0, 0, 0);
         currentWeekStart.setDate(currentWeekStart.getDate() - currentWeekStart.getDay());
@@ -297,7 +297,7 @@
             try {
                 const token = localStorage.getItem('token');
                 if (!token) {
-                    window.location.href = 'login.html';
+                    window.location.href = 'index.html';
                     return;
                 }
 
@@ -398,7 +398,7 @@
             try {
                 const token = localStorage.getItem('token');
                 if (!token) {
-                    window.location.href = 'login.html';
+                    window.location.href = 'index.html';
                     return;
                 }
 
@@ -437,14 +437,14 @@
         // Logout
         function logout() {
             localStorage.removeItem('token');
-            window.location.href = 'login.html';
+            window.location.href = 'index.html';
         }
 
         // Initialisierung
         document.addEventListener('DOMContentLoaded', () => {
             const token = localStorage.getItem('token');
             if (!token) {
-                window.location.href = 'login.html';
+                window.location.href = 'index.html';
                 return;
             }
 
