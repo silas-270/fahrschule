@@ -139,60 +139,92 @@
         // Backend-URL Konfiguration
         const BACKEND_URL = window.location.protocol + '//' + window.location.hostname + ':3000';
         
+        let calendar;
+        let currentAppointmentId;
+
         // Session-Überprüfung
-        function checkSession() {
+        async function checkSession() {
             const token = localStorage.getItem('token');
             if (!token) {
                 window.location.href = 'index.html';
                 return false;
             }
-            return true;
-        }
-
-        // Initial Session Check
-        if (!checkSession()) {
-            throw new Error('Nicht authentifiziert');
-        }
-
-        let calendar;
-        let currentAppointmentId;
-
-        document.addEventListener('DOMContentLoaded', function() {
-            if (!checkSession()) return;
-
-            const calendarEl = document.getElementById('calendar');
-            calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'timeGridWeek',
-                locale: 'de',
-                headerToolbar: {
-                    left: 'prev,next today',
-                    center: 'title',
-                    right: 'timeGridWeek,timeGridDay'
-                },
-                slotMinTime: '08:00:00',
-                slotMaxTime: '20:00:00',
-                allDaySlot: false,
-                events: fetchAppointments,
-                eventClick: function(info) {
-                    showAppointmentDetails(info.event);
-                }
-            });
-            calendar.render();
-        });
-
-        async function fetchAppointments(info, successCallback, failureCallback) {
-            if (!checkSession()) return;
 
             try {
-                const response = await fetch(`${BACKEND_URL}/appointments?start_date=${info.startStr}&end_date=${info.endStr}`, {
+                // Teste den Token mit einer einfachen Anfrage
+                const response = await fetch(`${BACKEND_URL}/appointments?start_date=${new Date().toISOString()}&end_date=${new Date().toISOString()}`, {
                     headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        'Authorization': `Bearer ${token}`
                     }
                 });
 
                 if (!response.ok) {
                     if (response.status === 401) {
-                        // Token ungültig oder abgelaufen
+                        localStorage.removeItem('token');
+                        window.location.href = 'index.html';
+                        return false;
+                    }
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                return true;
+            } catch (error) {
+                console.error('Session-Überprüfung fehlgeschlagen:', error);
+                localStorage.removeItem('token');
+                window.location.href = 'index.html';
+                return false;
+            }
+        }
+
+        // Initialisiere die Anwendung
+        async function initializeApp() {
+            try {
+                const isAuthenticated = await checkSession();
+                if (!isAuthenticated) return;
+
+                const calendarEl = document.getElementById('calendar');
+                calendar = new FullCalendar.Calendar(calendarEl, {
+                    initialView: 'timeGridWeek',
+                    locale: 'de',
+                    headerToolbar: {
+                        left: 'prev,next today',
+                        center: 'title',
+                        right: 'timeGridWeek,timeGridDay'
+                    },
+                    slotMinTime: '08:00:00',
+                    slotMaxTime: '20:00:00',
+                    allDaySlot: false,
+                    events: fetchAppointments,
+                    eventClick: function(info) {
+                        showAppointmentDetails(info.event);
+                    }
+                });
+                calendar.render();
+            } catch (error) {
+                console.error('Fehler bei der Initialisierung:', error);
+                alert('Ein Fehler ist aufgetreten. Bitte laden Sie die Seite neu.');
+            }
+        }
+
+        // Starte die Anwendung wenn das DOM geladen ist
+        document.addEventListener('DOMContentLoaded', initializeApp);
+
+        async function fetchAppointments(info, successCallback, failureCallback) {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    window.location.href = 'index.html';
+                    return;
+                }
+
+                const response = await fetch(`${BACKEND_URL}/appointments?start_date=${info.startStr}&end_date=${info.endStr}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
                         localStorage.removeItem('token');
                         window.location.href = 'index.html';
                         return;
@@ -224,8 +256,6 @@
         }
 
         function showAppointmentDetails(event) {
-            if (!checkSession()) return;
-
             currentAppointmentId = event.id;
             const date = new Date(event.start);
             
@@ -251,14 +281,18 @@
         }
 
         async function updateAppointmentStatus(status) {
-            if (!checkSession()) return;
-
             try {
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    window.location.href = 'index.html';
+                    return;
+                }
+
                 const response = await fetch(`${BACKEND_URL}/appointments/${currentAppointmentId}/status`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        'Authorization': `Bearer ${token}`
                     },
                     body: JSON.stringify({ status })
                 });
