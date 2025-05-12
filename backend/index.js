@@ -2,6 +2,7 @@ import express from 'express';
 import bcrypt from 'bcrypt';
 import cors from 'cors';
 import { openDb } from './db.js';
+import jwt from 'jsonwebtoken';
 
 const app = express();
 app.use(express.json());
@@ -9,6 +10,7 @@ app.use(cors());
 
 const PORT = process.env.PORT || 3000;
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'; // In Produktion sollte dies eine sichere Umgebungsvariable sein
 
 // Überprüfe, ob ADMIN_TOKEN gesetzt ist
 if (!ADMIN_TOKEN) {
@@ -100,6 +102,40 @@ const adminAuth = (req, res, next) => {
     }
     
     next();
+};
+
+// Authentifizierungs-Middleware
+const auth = async (req, res, next) => {
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({
+                success: false,
+                message: 'Kein Token vorhanden'
+            });
+        }
+
+        const token = authHeader.split(' ')[1];
+        const decoded = jwt.verify(token, JWT_SECRET);
+        
+        const db = await openDb();
+        const user = await db.get('SELECT id, username FROM users WHERE id = $1', [decoded.userId]);
+        
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                message: 'Ungültiger Token'
+            });
+        }
+
+        req.user = user;
+        next();
+    } catch (error) {
+        return res.status(401).json({
+            success: false,
+            message: 'Ungültiger Token'
+        });
+    }
 };
 
 // init DB
@@ -242,13 +278,21 @@ app.post('/login', async (req, res) => {
         // Reset failed attempts and update last login on successful login
         await db.run('UPDATE users SET failed_attempts = 0, last_login = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
 
+        // Token generieren
+        const token = jwt.sign(
+            { userId: user.id },
+            JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+
         res.json({
             success: true,
             message: 'Login erfolgreich',
             user: {
                 id: user.id,
                 username: user.username
-            }
+            },
+            token
         });
     } catch (error) {
         console.error('Login-Fehler:', error);
@@ -405,7 +449,7 @@ const APPOINTMENT_TYPES = ['Überland', 'Autobahn', 'Nachtfahrt', 'Parken', 'Gru
 
 // Termin-Routen
 // Alle Termine eines Benutzers abrufen
-app.get('/appointments', async (req, res) => {
+app.get('/appointments', auth, async (req, res) => {
     try {
         const { start_date, end_date } = req.query;
         
@@ -439,7 +483,7 @@ app.get('/appointments', async (req, res) => {
 });
 
 // Termin-Status aktualisieren
-app.put('/appointments/:id/status', async (req, res) => {
+app.put('/appointments/:id/status', auth, async (req, res) => {
     try {
         const { id } = req.params;
         const { status } = req.body;
