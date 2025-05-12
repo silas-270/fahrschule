@@ -256,148 +256,206 @@
                 <!-- Wird dynamisch mit JavaScript gefüllt -->
             </div>
             <div class="contact-info">
-                <span>Bei Rückfragen:</span>
                 <a href="https://wa.me/49123456789" target="_blank">
-                    <svg class="whatsapp-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <svg class="whatsapp-icon" viewBox="0 0 24 24">
                         <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
                     </svg>
-                    +49 123 456 789
+                    Kontakt aufnehmen
                 </a>
             </div>
         </div>
     </div>
 
     <script>
-        let currentWeekOffset = 0;
+        // Konfiguration
+        const API_URL = 'https://fahrschule-backend.up.railway.app'; // Ersetze dies mit deiner Railway-URL
+        let currentWeekStart = new Date();
+        currentWeekStart.setHours(0, 0, 0, 0);
+        currentWeekStart.setDate(currentWeekStart.getDate() - currentWeekStart.getDay());
 
-        // Session-Überprüfung
-        window.addEventListener('load', () => {
-            const session = localStorage.getItem('session');
-            if (!session) {
-                window.location.href = 'index.html';
+        // Hilfsfunktionen
+        function formatDate(date) {
+            return date.toISOString().split('T')[0];
+        }
+
+        function formatTime(date) {
+            return date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function getWeekDates(startDate) {
+            const dates = [];
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(startDate);
+                date.setDate(date.getDate() + i);
+                dates.push(date);
+            }
+            return dates;
+        }
+
+        // Termine laden
+        async function loadAppointments() {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                const endDate = new Date(currentWeekStart);
+                endDate.setDate(endDate.getDate() + 6);
+
+                const response = await fetch(
+                    `${API_URL}/appointments?startDate=${formatDate(currentWeekStart)}&endDate=${formatDate(endDate)}`,
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error('Fehler beim Laden der Termine');
+                }
+
+                const appointments = await response.json();
+                displayAppointments(appointments);
+            } catch (error) {
+                console.error('Fehler:', error);
+                alert('Fehler beim Laden der Termine');
+            }
+        }
+
+        // Termine anzeigen
+        function displayAppointments(appointments) {
+            const calendarContainer = document.querySelector('.calendar-container');
+            const weekDates = getWeekDates(currentWeekStart);
+
+            // Kalender-Header aktualisieren
+            const header = document.querySelector('.calendar-header h2');
+            header.textContent = `Terminübersicht ${formatDate(weekDates[0])} - ${formatDate(weekDates[6])}`;
+
+            // Termine nach Tagen gruppieren
+            const appointmentsByDay = {};
+            weekDates.forEach(date => {
+                appointmentsByDay[formatDate(date)] = [];
+            });
+
+            appointments.forEach(appointment => {
+                const date = new Date(appointment.date);
+                const dateKey = formatDate(date);
+                if (appointmentsByDay[dateKey]) {
+                    appointmentsByDay[dateKey].push(appointment);
+                }
+            });
+
+            // Kalender-Inhalt generieren
+            let calendarHTML = '';
+            weekDates.forEach(date => {
+                const dateKey = formatDate(date);
+                const dayAppointments = appointmentsByDay[dateKey] || [];
+
+                calendarHTML += `
+                    <div class="day-card">
+                        <div class="day-header">
+                            <span>${date.toLocaleDateString('de-DE', { weekday: 'long' })}</span>
+                            <span class="date">${date.toLocaleDateString('de-DE')}</span>
+                        </div>
+                        ${dayAppointments.map(appointment => `
+                            <div class="appointment ${appointment.status}">
+                                <div>${formatTime(new Date(appointment.date))} - ${appointment.type}</div>
+                                ${appointment.status === 'suggested' ? `
+                                    <div class="appointment-actions">
+                                        <button class="appointment-button accept-button" 
+                                                onclick="updateAppointmentStatus(${appointment.id}, 'accepted')">
+                                            Annehmen
+                                        </button>
+                                        <button class="appointment-button reject-button"
+                                                onclick="updateAppointmentStatus(${appointment.id}, 'rejected')">
+                                            Ablehnen
+                                        </button>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            });
+
+            calendarContainer.innerHTML = `
+                <div class="calendar-header">
+                    <h2>Terminübersicht</h2>
+                    <div class="week-navigation">
+                        <button class="nav-button" onclick="previousWeek()">←</button>
+                        <button class="nav-button" onclick="nextWeek()">→</button>
+                    </div>
+                </div>
+                ${calendarHTML}
+            `;
+        }
+
+        // Terminstatus aktualisieren
+        async function updateAppointmentStatus(appointmentId, status) {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                const response = await fetch(
+                    `${API_URL}/appointments/${appointmentId}/${status}`,
+                    {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error('Fehler beim Aktualisieren des Termins');
+                }
+
+                await loadAppointments();
+            } catch (error) {
+                console.error('Fehler:', error);
+                alert('Fehler beim Aktualisieren des Termins');
+            }
+        }
+
+        // Navigation
+        function previousWeek() {
+            currentWeekStart.setDate(currentWeekStart.getDate() - 7);
+            loadAppointments();
+        }
+
+        function nextWeek() {
+            currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+            loadAppointments();
+        }
+
+        // Logout
+        function logout() {
+            localStorage.removeItem('token');
+            window.location.href = 'login.html';
+        }
+
+        // Initialisierung
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = 'login.html';
                 return;
             }
 
-            try {
-                const sessionData = JSON.parse(session);
-                document.getElementById('username').textContent = sessionData.username;
-                initializeCalendar();
-            } catch (error) {
-                console.error('Session error:', error);
-                logout();
+            // Benutzername anzeigen
+            const username = localStorage.getItem('username');
+            if (username) {
+                document.getElementById('username').textContent = username;
             }
+
+            loadAppointments();
         });
-
-        function logout() {
-            localStorage.removeItem('session');
-            window.location.href = 'index.html';
-        }
-
-        function formatDate(date) {
-            return `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()}`;
-        }
-
-        function updateWeekTitle(startDate, endDate) {
-            const weekTitle = document.getElementById('weekTitle');
-            if (weekTitle) {
-                weekTitle.textContent = `${formatDate(startDate)} - ${formatDate(endDate)}`;
-            }
-        }
-
-        function changeWeek(offset) {
-            currentWeekOffset += offset;
-            initializeCalendar();
-        }
-
-        function initializeCalendar() {
-            const weekView = document.getElementById('weekView');
-            weekView.innerHTML = ''; // Clear existing content
-
-            const today = new Date();
-            const startDate = new Date(today);
-            startDate.setDate(today.getDate() + (currentWeekOffset * 7));
-            
-            const endDate = new Date(startDate);
-            endDate.setDate(startDate.getDate() + 6);
-            
-            updateWeekTitle(startDate, endDate);
-
-            const days = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
-
-            // Erstelle Karten für die nächsten 7 Tage
-            for (let i = 0; i < 7; i++) {
-                const date = new Date(startDate);
-                date.setDate(startDate.getDate() + i);
-                
-                const dayCard = document.createElement('div');
-                dayCard.className = 'day-card';
-                
-                const dayHeader = document.createElement('div');
-                dayHeader.className = 'day-header';
-                
-                const dayName = document.createElement('span');
-                dayName.textContent = days[date.getDay()];
-                
-                const dateSpan = document.createElement('span');
-                dateSpan.className = 'date';
-                dateSpan.textContent = formatDate(date);
-                
-                dayHeader.appendChild(dayName);
-                dayHeader.appendChild(dateSpan);
-                dayCard.appendChild(dayHeader);
-                
-                // Beispiel-Termine (später durch echte Daten ersetzen)
-                if (i === 1) {
-                    const appointment = createAppointment('10:00', 'Überlandfahrt', 'suggested');
-                    dayCard.appendChild(appointment);
-                }
-                if (i === 3) {
-                    const appointment = createAppointment('14:00', 'Stadtfahrt', 'accepted');
-                    dayCard.appendChild(appointment);
-                }
-                
-                weekView.appendChild(dayCard);
-            }
-        }
-
-        function createAppointment(time, type, status) {
-            const appointment = document.createElement('div');
-            appointment.className = `appointment ${status}`;
-            
-            const content = document.createElement('div');
-            content.textContent = `${time} - ${type}`;
-            appointment.appendChild(content);
-
-            if (status === 'suggested') {
-                const actions = document.createElement('div');
-                actions.className = 'appointment-actions';
-                
-                const acceptButton = document.createElement('button');
-                acceptButton.className = 'appointment-button accept-button';
-                acceptButton.textContent = 'Annehmen';
-                acceptButton.onclick = () => handleAppointmentResponse(appointment, 'accepted');
-                
-                const rejectButton = document.createElement('button');
-                rejectButton.className = 'appointment-button reject-button';
-                rejectButton.textContent = 'Ablehnen';
-                rejectButton.onclick = () => handleAppointmentResponse(appointment, 'rejected');
-                
-                actions.appendChild(acceptButton);
-                actions.appendChild(rejectButton);
-                appointment.appendChild(actions);
-            }
-
-            return appointment;
-        }
-
-        function handleAppointmentResponse(appointment, newStatus) {
-            // Hier später die API-Aufrufe implementieren
-            appointment.className = `appointment ${newStatus}`;
-            const actions = appointment.querySelector('.appointment-actions');
-            if (actions) {
-                actions.remove();
-            }
-        }
     </script>
 </body>
 </html> 
