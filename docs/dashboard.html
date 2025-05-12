@@ -250,6 +250,13 @@
             return `${date.getDate()}.${date.getMonth() + 1}.${date.getFullYear()}`;
         }
 
+        function updateWeekTitle(startDate, endDate) {
+            const weekTitle = document.getElementById('weekTitle');
+            if (weekTitle) {
+                weekTitle.textContent = `${formatDate(startDate)} - ${formatDate(endDate)}`;
+            }
+        }
+
         function changeWeek(offset) {
             currentWeekOffset += offset;
             initializeCalendar();
@@ -266,8 +273,7 @@
             const endDate = new Date(startDate);
             endDate.setDate(startDate.getDate() + 6);
             
-            const weekTitle = document.getElementById('weekTitle');
-            weekTitle.textContent = `${formatDate(startDate)} - ${formatDate(endDate)}`;
+            updateWeekTitle(startDate, endDate);
 
             const days = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
 
