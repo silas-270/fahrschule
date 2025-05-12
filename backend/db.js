@@ -58,6 +58,7 @@ export async function openDb() {
                 console.log('Users-Tabelle wurde erfolgreich erstellt oder existiert bereits');
 
                 // Erstelle die appointments-Tabelle, falls sie nicht existiert
+                await client.query(`DROP TABLE IF EXISTS appointments CASCADE;`);
                 await client.query(`
                     CREATE TABLE IF NOT EXISTS appointments (
                         id SERIAL PRIMARY KEY,
@@ -177,8 +178,9 @@ export async function openDb() {
             const client = await pool.connect();
             try {
                 const query = `
-                    INSERT INTO appointments (student_id, date, type, status)
-                    VALUES ($1, $2, $3, $4)
+                    INSERT INTO appointments 
+                    (student_id, date, type, status, created_at, updated_at)
+                    VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                     RETURNING *
                 `;
                 const result = await client.query(query, [
