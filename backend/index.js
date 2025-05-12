@@ -400,6 +400,99 @@ app.post('/admin/users/:id/reset-password', adminAuth, async (req, res) => {
     }
 });
 
+// Termin-Typen
+const APPOINTMENT_TYPES = ['Überland', 'Autobahn', 'Nachtfahrt', 'Parken', 'Grundfahraufgaben'];
+
+// Termin-Routen
+// Alle Termine eines Benutzers abrufen
+app.get('/appointments', async (req, res) => {
+    try {
+        const { start_date, end_date } = req.query;
+        
+        if (!start_date || !end_date) {
+            return res.status(400).json({
+                success: false,
+                message: 'Start- und Enddatum sind erforderlich'
+            });
+        }
+
+        const db = await openDb();
+        const appointments = await db.all(
+            `SELECT * FROM appointments 
+             WHERE user_id = $1 
+             AND date_time BETWEEN $2 AND $3 
+             ORDER BY date_time ASC`,
+            [req.user.id, start_date, end_date]
+        );
+
+        res.json({
+            success: true,
+            appointments
+        });
+    } catch (error) {
+        console.error('Fehler beim Abrufen der Termine:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Ein Fehler ist aufgetreten'
+        });
+    }
+});
+
+// Termin-Status aktualisieren
+app.put('/appointments/:id/status', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        if (!['accepted', 'rejected'].includes(status)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Ungültiger Status'
+            });
+        }
+
+        const db = await openDb();
+        
+        // Prüfe, ob der Termin existiert und dem Benutzer gehört
+        const appointment = await db.get(
+            'SELECT * FROM appointments WHERE id = $1 AND user_id = $2',
+            [id, req.user.id]
+        );
+
+        if (!appointment) {
+            return res.status(404).json({
+                success: false,
+                message: 'Termin nicht gefunden'
+            });
+        }
+
+        if (appointment.status !== 'suggested') {
+            return res.status(400).json({
+                success: false,
+                message: 'Nur vorgeschlagene Termine können aktualisiert werden'
+            });
+        }
+
+        await db.run(
+            `UPDATE appointments 
+             SET status = $1, updated_at = CURRENT_TIMESTAMP 
+             WHERE id = $2`,
+            [status, id]
+        );
+
+        res.json({
+            success: true,
+            message: 'Termin-Status erfolgreich aktualisiert'
+        });
+    } catch (error) {
+        console.error('Fehler beim Aktualisieren des Termin-Status:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Ein Fehler ist aufgetreten'
+        });
+    }
+});
+
 // Starte den Server
 app.listen(PORT, () => {
     console.log(`Backend läuft auf Port ${PORT}`);

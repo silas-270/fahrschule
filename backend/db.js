@@ -54,8 +54,18 @@ export async function openDb() {
                         last_login TIMESTAMP,
                         failed_attempts INTEGER DEFAULT 0
                     );
+
+                    CREATE TABLE IF NOT EXISTS appointments (
+                        id SERIAL PRIMARY KEY,
+                        user_id INTEGER REFERENCES users(id),
+                        date_time TIMESTAMP NOT NULL,
+                        type TEXT NOT NULL,
+                        status TEXT NOT NULL CHECK (status IN ('suggested', 'accepted', 'rejected')),
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
                 `);
-                console.log('Users-Tabelle wurde erfolgreich erstellt oder existiert bereits');
+                console.log('Datenbanktabellen wurden erfolgreich erstellt oder existieren bereits');
                 
                 client.release();
                 break;
