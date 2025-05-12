@@ -115,6 +115,23 @@ const adminAuth = (req, res, next) => {
 // JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
+// Token Validierung Middleware
+const validateToken = (req, res, next) => {
+    try {
+        const token = req.headers.authorization?.split(' ')[1];
+        if (!token) {
+            return res.status(401).json({ message: 'Nicht authentifiziert' });
+        }
+
+        const decoded = jwt.verify(token, JWT_SECRET);
+        req.user = decoded;
+        next();
+    } catch (error) {
+        console.error('Token validation error:', error);
+        res.status(401).json({ message: 'Ungültiger Token' });
+    }
+};
+
 // init DB
 (async () => {
     try {
