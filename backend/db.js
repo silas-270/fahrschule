@@ -235,6 +235,43 @@ export async function openDb() {
             } finally {
                 client.release();
             }
+        },
+
+        // Debug-Funktion zum Überprüfen der Datenbank
+        debugDatabase: async () => {
+            const client = await pool.connect();
+            try {
+                // Überprüfe users Tabelle
+                const usersResult = await client.query('SELECT * FROM users');
+                console.log('Users in database:', usersResult.rows);
+
+                // Überprüfe appointments Tabelle
+                const appointmentsResult = await client.query('SELECT * FROM appointments');
+                console.log('Appointments in database:', appointmentsResult.rows);
+
+                // Überprüfe die spezifische Abfrage
+                const testQuery = `
+                    SELECT a.*, u.username as student_name
+                    FROM appointments a
+                    JOIN users u ON a.student_id = u.id
+                    WHERE a.date >= '2025-05-12'::timestamp
+                    AND a.date <= '2025-05-18'::timestamp
+                    ORDER BY a.date ASC
+                `;
+                const testResult = await client.query(testQuery);
+                console.log('Test query result:', testResult.rows);
+
+                return {
+                    users: usersResult.rows,
+                    appointments: appointmentsResult.rows,
+                    testQuery: testResult.rows
+                };
+            } catch (error) {
+                console.error('Debug database error:', error);
+                throw error;
+            } finally {
+                client.release();
+            }
         }
     };
 }

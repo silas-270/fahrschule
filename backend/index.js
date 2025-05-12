@@ -560,6 +560,22 @@ app.delete('/appointments/:id', adminAuth, async (req, res) => {
     }
 });
 
+// Debug-Endpunkt (nur für Admin)
+app.get('/debug', validateToken, async (req, res) => {
+    if (req.user.username !== 'kammersi') {
+        return res.status(403).json({ error: 'Nur für Admin zugänglich' });
+    }
+    
+    try {
+        const db = await openDb();
+        const debugInfo = await db.debugDatabase();
+        res.json(debugInfo);
+    } catch (error) {
+        console.error('Debug endpoint error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Starte den Server
 app.listen(PORT, () => {
     console.log(`Backend läuft auf Port ${PORT}`);
