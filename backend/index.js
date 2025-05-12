@@ -2,7 +2,6 @@ import express from 'express';
 import bcrypt from 'bcrypt';
 import cors from 'cors';
 import { openDb } from './db.js';
-import jwt from 'jsonwebtoken';
 
 const app = express();
 app.use(express.json());
@@ -10,7 +9,6 @@ app.use(cors());
 
 const PORT = process.env.PORT || 3000;
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'; // In Produktion sollte dies eine sichere Umgebungsvariable sein
 
 // Überprüfe, ob ADMIN_TOKEN gesetzt ist
 if (!ADMIN_TOKEN) {
@@ -102,40 +100,6 @@ const adminAuth = (req, res, next) => {
     }
     
     next();
-};
-
-// Authentifizierungs-Middleware
-const auth = async (req, res, next) => {
-    try {
-        const authHeader = req.headers.authorization;
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({
-                success: false,
-                message: 'Kein Token vorhanden'
-            });
-        }
-
-        const token = authHeader.split(' ')[1];
-        const decoded = jwt.verify(token, JWT_SECRET);
-        
-        const db = await openDb();
-        const user = await db.get('SELECT id, username FROM users WHERE id = $1', [decoded.userId]);
-        
-        if (!user) {
-            return res.status(401).json({
-                success: false,
-                message: 'Ungültiger Token'
-            });
-        }
-
-        req.user = user;
-        next();
-    } catch (error) {
-        return res.status(401).json({
-            success: false,
-            message: 'Ungültiger Token'
-        });
-    }
 };
 
 // init DB
@@ -278,21 +242,13 @@ app.post('/login', async (req, res) => {
         // Reset failed attempts and update last login on successful login
         await db.run('UPDATE users SET failed_attempts = 0, last_login = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
 
-        // Token generieren
-        const token = jwt.sign(
-            { userId: user.id },
-            JWT_SECRET,
-            { expiresIn: '24h' }
-        );
-
         res.json({
             success: true,
             message: 'Login erfolgreich',
             user: {
                 id: user.id,
                 username: user.username
-            },
-            token
+            }
         });
     } catch (error) {
         console.error('Login-Fehler:', error);
@@ -437,99 +393,6 @@ app.post('/admin/users/:id/reset-password', adminAuth, async (req, res) => {
         });
     } catch (error) {
         console.error('Fehler beim Zurücksetzen des Passworts:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Ein Fehler ist aufgetreten'
-        });
-    }
-});
-
-// Termin-Typen
-const APPOINTMENT_TYPES = ['Überland', 'Autobahn', 'Nachtfahrt', 'Parken', 'Grundfahraufgaben'];
-
-// Termin-Routen
-// Alle Termine eines Benutzers abrufen
-app.get('/appointments', auth, async (req, res) => {
-    try {
-        const { start_date, end_date } = req.query;
-        
-        if (!start_date || !end_date) {
-            return res.status(400).json({
-                success: false,
-                message: 'Start- und Enddatum sind erforderlich'
-            });
-        }
-
-        const db = await openDb();
-        const appointments = await db.all(
-            `SELECT * FROM appointments 
-             WHERE user_id = $1 
-             AND date_time BETWEEN $2 AND $3 
-             ORDER BY date_time ASC`,
-            [req.user.id, start_date, end_date]
-        );
-
-        res.json({
-            success: true,
-            appointments
-        });
-    } catch (error) {
-        console.error('Fehler beim Abrufen der Termine:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Ein Fehler ist aufgetreten'
-        });
-    }
-});
-
-// Termin-Status aktualisieren
-app.put('/appointments/:id/status', auth, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { status } = req.body;
-
-        if (!['accepted', 'rejected'].includes(status)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Ungültiger Status'
-            });
-        }
-
-        const db = await openDb();
-        
-        // Prüfe, ob der Termin existiert und dem Benutzer gehört
-        const appointment = await db.get(
-            'SELECT * FROM appointments WHERE id = $1 AND user_id = $2',
-            [id, req.user.id]
-        );
-
-        if (!appointment) {
-            return res.status(404).json({
-                success: false,
-                message: 'Termin nicht gefunden'
-            });
-        }
-
-        if (appointment.status !== 'suggested') {
-            return res.status(400).json({
-                success: false,
-                message: 'Nur vorgeschlagene Termine können aktualisiert werden'
-            });
-        }
-
-        await db.run(
-            `UPDATE appointments 
-             SET status = $1, updated_at = CURRENT_TIMESTAMP 
-             WHERE id = $2`,
-            [status, id]
-        );
-
-        res.json({
-            success: true,
-            message: 'Termin-Status erfolgreich aktualisiert'
-        });
-    } catch (error) {
-        console.error('Fehler beim Aktualisieren des Termin-Status:', error);
         res.status(500).json({
             success: false,
             message: 'Ein Fehler ist aufgetreten'
