@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fahrschule Login</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 400px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            width: 100%;
+            padding: 0.8rem;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        button:hover {
+            background: #764ba2;
+        }
+
+        .message {
+            margin-top: 1rem;
+            padding: 0.8rem;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Fahrschule Login</h1>
+        <form id="login-form">
+            <div class="form-group">
+                <input type="text" id="username" placeholder="Benutzername" required />
+            </div>
+            <div class="form-group">
+                <input type="password" id="password" placeholder="Passwort" required />
+            </div>
+            <button type="submit">Einloggen</button>
+        </form>
+        <div id="message" class="message" style="display: none;"></div>
+    </div>
+
+    <script>
+        const API_URL = 'https://fahrschule-production.up.railway.app';
+
+        // Prüfe ob bereits eine Session existiert
+        window.addEventListener('load', () => {
+            const session = localStorage.getItem('session');
+            if (session) {
+                window.location.href = 'dashboard.html';
+            }
+        });
+
+        function showMessage(message, isError = false) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = message;
+            messageDiv.className = `message ${isError ? 'error' : 'success'}`;
+            messageDiv.style.display = 'block';
+        }
+
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch(`${API_URL}/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Speichere Session-Informationen
+                    localStorage.setItem('session', JSON.stringify({
+                        username: data.user.username,
+                        timestamp: Date.now()
+                    }));
+                    
+                    showMessage('Login erfolgreich! Weiterleitung...');
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 1000);
+                } else {
+                    showMessage(data.message || 'Login fehlgeschlagen', true);
+                }
+            } catch (error) {
+                showMessage('Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.', true);
+                console.error('Login error:', error);
+            }
+        });
+    </script>
+</body>
+</html>
