@@ -160,11 +160,17 @@
                 const data = await response.json();
                 
                 if (response.ok) {
+                    console.log('Login response:', data); // Debug output
+                    
                     // Speichere Session-Informationen
-                    localStorage.setItem('session', JSON.stringify({
+                    const sessionData = {
                         username: data.user.username,
+                        token: data.token,
                         timestamp: Date.now()
-                    }));
+                    };
+                    console.log('Storing session data:', sessionData); // Debug output
+                    
+                    localStorage.setItem('session', JSON.stringify(sessionData));
                     
                     showMessage('Login erfolgreich! Weiterleitung...');
                     setTimeout(() => {

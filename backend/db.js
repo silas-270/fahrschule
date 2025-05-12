@@ -58,7 +58,6 @@ export async function openDb() {
                 console.log('Users-Tabelle wurde erfolgreich erstellt oder existiert bereits');
 
                 // Erstelle die appointments-Tabelle, falls sie nicht existiert
-                await client.query(`DROP TABLE IF EXISTS appointments CASCADE;`);
                 await client.query(`
                     CREATE TABLE IF NOT EXISTS appointments (
                         id SERIAL PRIMARY KEY,
