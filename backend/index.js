@@ -8,7 +8,14 @@ app.use(express.json());
 app.use(cors());
 
 const PORT = process.env.PORT || 3000;
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'your-secure-admin-token';
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
+
+// Überprüfe, ob ADMIN_TOKEN gesetzt ist
+if (!ADMIN_TOKEN) {
+    console.error('WARNUNG: ADMIN_TOKEN ist nicht in den Umgebungsvariablen gesetzt!');
+    console.error('Bitte setzen Sie den ADMIN_TOKEN in Railway unter Variables.');
+    console.error('Die Admin-Routen werden ohne Token nicht funktionieren.');
+}
 
 // Logging Middleware
 app.use((req, res, next) => {
@@ -66,24 +73,18 @@ app.use((req, res, next) => {
 const adminAuth = (req, res, next) => {
     const token = req.headers['admin-token'];
     
-    // Debug-Logging
-    console.log('Token-Länge (eingehend):', token?.length);
-    console.log('Token-Länge (erwartet):', ADMIN_TOKEN?.length);
-    console.log('Token-ASCII (eingehend):', token?.split('').map(c => c.charCodeAt(0)));
-    console.log('Token-ASCII (erwartet):', ADMIN_TOKEN?.split('').map(c => c.charCodeAt(0)));
+    if (!ADMIN_TOKEN) {
+        console.error('ADMIN_TOKEN ist nicht in den Umgebungsvariablen gesetzt!');
+        return res.status(500).json({
+            success: false,
+            message: 'Server-Konfigurationsfehler: ADMIN_TOKEN nicht gesetzt'
+        });
+    }
     
     if (!token) {
         return res.status(401).json({
             success: false,
             message: 'Admin-Token fehlt im Header'
-        });
-    }
-    
-    if (!ADMIN_TOKEN) {
-        console.error('ADMIN_TOKEN ist nicht in den Umgebungsvariablen gesetzt!');
-        return res.status(500).json({
-            success: false,
-            message: 'Server-Konfigurationsfehler'
         });
     }
     
