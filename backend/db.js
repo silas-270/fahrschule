@@ -1,6 +1,15 @@
 import pg from 'pg';
 const { Pool } = pg;
 
+// Debug: Zeige die Datenbank-URL (ohne Passwort)
+const dbUrl = process.env.DATABASE_URL;
+if (dbUrl) {
+    const safeUrl = dbUrl.replace(/:([^:@]+)@/, ':****@');
+    console.log('Verwende Datenbank-URL:', safeUrl);
+} else {
+    console.error('DATABASE_URL ist nicht gesetzt!');
+}
+
 // Erstelle einen Pool mit den Umgebungsvariablen von Railway
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
@@ -18,10 +27,12 @@ pool.on('error', (err) => {
 export async function openDb() {
     try {
         // Teste die Verbindung
+        console.log('Versuche Datenbankverbindung herzustellen...');
         await pool.query('SELECT NOW()');
         console.log('Datenbankverbindung erfolgreich hergestellt');
     } catch (error) {
         console.error('Fehler bei der Datenbankverbindung:', error);
+        console.error('Verfügbare Umgebungsvariablen:', Object.keys(process.env));
         throw new Error('Datenbankverbindung fehlgeschlagen: ' + error.message);
     }
 
