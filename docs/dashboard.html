@@ -132,78 +132,49 @@
         <button class="btn btn-secondary mt-3" onclick="closeAppointmentDetails()">Schließen</button>
     </div>
 
+    <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/de.js"></script>
     <script>
         // Backend-URL Konfiguration
-        const BACKEND_URL = window.location.protocol + '//' + window.location.hostname + ':3000';
+        const BACKEND_URL = window.APP_CONFIG.backendUrl;
         
         let calendar;
         let currentAppointmentId;
 
         // Session-Überprüfung
-        async function checkSession() {
+        function checkSession() {
             const token = localStorage.getItem('token');
             if (!token) {
                 window.location.href = 'index.html';
                 return false;
             }
-
-            try {
-                // Teste den Token mit einer einfachen Anfrage
-                const response = await fetch(`${BACKEND_URL}/appointments?start_date=${new Date().toISOString()}&end_date=${new Date().toISOString()}`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-
-                if (!response.ok) {
-                    if (response.status === 401) {
-                        localStorage.removeItem('token');
-                        window.location.href = 'index.html';
-                        return false;
-                    }
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                return true;
-            } catch (error) {
-                console.error('Session-Überprüfung fehlgeschlagen:', error);
-                localStorage.removeItem('token');
-                window.location.href = 'index.html';
-                return false;
-            }
+            return true;
         }
 
         // Initialisiere die Anwendung
-        async function initializeApp() {
-            try {
-                const isAuthenticated = await checkSession();
-                if (!isAuthenticated) return;
+        function initializeApp() {
+            if (!checkSession()) return;
 
-                const calendarEl = document.getElementById('calendar');
-                calendar = new FullCalendar.Calendar(calendarEl, {
-                    initialView: 'timeGridWeek',
-                    locale: 'de',
-                    headerToolbar: {
-                        left: 'prev,next today',
-                        center: 'title',
-                        right: 'timeGridWeek,timeGridDay'
-                    },
-                    slotMinTime: '08:00:00',
-                    slotMaxTime: '20:00:00',
-                    allDaySlot: false,
-                    events: fetchAppointments,
-                    eventClick: function(info) {
-                        showAppointmentDetails(info.event);
-                    }
-                });
-                calendar.render();
-            } catch (error) {
-                console.error('Fehler bei der Initialisierung:', error);
-                alert('Ein Fehler ist aufgetreten. Bitte laden Sie die Seite neu.');
-            }
+            const calendarEl = document.getElementById('calendar');
+            calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'timeGridWeek',
+                locale: 'de',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'timeGridWeek,timeGridDay'
+                },
+                slotMinTime: '08:00:00',
+                slotMaxTime: '20:00:00',
+                allDaySlot: false,
+                events: fetchAppointments,
+                eventClick: function(info) {
+                    showAppointmentDetails(info.event);
+                }
+            });
+            calendar.render();
         }
 
         // Starte die Anwendung wenn das DOM geladen ist
