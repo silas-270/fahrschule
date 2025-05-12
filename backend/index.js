@@ -65,12 +65,31 @@ app.use((req, res, next) => {
 // Middleware für Admin-Authentifizierung
 const adminAuth = (req, res, next) => {
     const token = req.headers['admin-token'];
+    console.log('Eingehender Admin-Token:', token ? 'Vorhanden' : 'Fehlt');
+    console.log('Erwarteter Admin-Token:', ADMIN_TOKEN ? 'Gesetzt' : 'Nicht gesetzt');
+    
+    if (!token) {
+        return res.status(401).json({
+            success: false,
+            message: 'Admin-Token fehlt im Header'
+        });
+    }
+    
+    if (!ADMIN_TOKEN) {
+        console.error('ADMIN_TOKEN ist nicht in den Umgebungsvariablen gesetzt!');
+        return res.status(500).json({
+            success: false,
+            message: 'Server-Konfigurationsfehler'
+        });
+    }
+    
     if (token !== ADMIN_TOKEN) {
         return res.status(401).json({
             success: false,
-            message: 'Nicht autorisiert'
+            message: 'Ungültiger Admin-Token'
         });
     }
+    
     next();
 };
 
