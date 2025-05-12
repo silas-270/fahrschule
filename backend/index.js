@@ -65,8 +65,12 @@ app.use((req, res, next) => {
 // Middleware für Admin-Authentifizierung
 const adminAuth = (req, res, next) => {
     const token = req.headers['admin-token'];
-    console.log('Eingehender Admin-Token:', token ? 'Vorhanden' : 'Fehlt');
-    console.log('Erwarteter Admin-Token:', ADMIN_TOKEN ? 'Gesetzt' : 'Nicht gesetzt');
+    
+    // Debug-Logging
+    console.log('Token-Länge (eingehend):', token?.length);
+    console.log('Token-Länge (erwartet):', ADMIN_TOKEN?.length);
+    console.log('Token-ASCII (eingehend):', token?.split('').map(c => c.charCodeAt(0)));
+    console.log('Token-ASCII (erwartet):', ADMIN_TOKEN?.split('').map(c => c.charCodeAt(0)));
     
     if (!token) {
         return res.status(401).json({
@@ -83,7 +87,11 @@ const adminAuth = (req, res, next) => {
         });
     }
     
-    if (token !== ADMIN_TOKEN) {
+    // Trimme beide Tokens und vergleiche sie
+    const trimmedToken = token.trim();
+    const trimmedAdminToken = ADMIN_TOKEN.trim();
+    
+    if (trimmedToken !== trimmedAdminToken) {
         return res.status(401).json({
             success: false,
             message: 'Ungültiger Admin-Token'
