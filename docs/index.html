@@ -4,12 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fahrschule Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Roboto', sans-serif;
         }
 
         body {
@@ -17,22 +18,23 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #212121;
         }
 
         .container {
-            background: white;
+            background: #303030;
             padding: 2rem;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
             width: 90%;
             max-width: 400px;
         }
 
         h1 {
             text-align: center;
-            color: #333;
+            color: #F3F3F3;
             margin-bottom: 1.5rem;
+            font-weight: 500;
         }
 
         .form-group {
@@ -42,48 +44,69 @@
         input {
             width: 100%;
             padding: 0.8rem;
-            border: 1px solid #ddd;
-            border-radius: 5px;
+            background: #424242;
+            border: 1px solid #4f4f4f;
+            border-radius: 8px;
             font-size: 1rem;
-            transition: border-color 0.3s ease;
+            color: #F3F3F3;
+            transition: all 0.2s ease;
+        }
+
+        input::placeholder {
+            color: #9E9E9E;
         }
 
         input:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #90CAF9;
+            background: #484848;
         }
 
         button {
             width: 100%;
             padding: 0.8rem;
-            background: #667eea;
-            color: white;
+            background: #424242;
+            color: #F3F3F3;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             font-size: 1rem;
             cursor: pointer;
-            transition: background 0.3s ease;
+            transition: all 0.2s ease;
+            font-weight: 500;
         }
 
         button:hover {
-            background: #764ba2;
+            background: #484848;
         }
 
         .message {
             margin-top: 1rem;
             padding: 0.8rem;
-            border-radius: 5px;
+            border-radius: 8px;
             text-align: center;
+            font-size: 0.9rem;
         }
 
         .success {
-            background: #d4edda;
-            color: #155724;
+            background: rgba(76, 175, 80, 0.1);
+            color: #4CAF50;
+            border: 1px solid rgba(76, 175, 80, 0.2);
         }
 
         .error {
-            background: #f8d7da;
-            color: #721c24;
+            background: rgba(244, 67, 54, 0.1);
+            color: #F44336;
+            border: 1px solid rgba(244, 67, 54, 0.2);
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 1.5rem;
+            }
+
+            h1 {
+                font-size: 1.3rem;
+            }
         }
     </style>
 </head>
