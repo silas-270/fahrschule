@@ -56,6 +56,20 @@ export async function openDb() {
                     );
                 `);
                 console.log('Users-Tabelle wurde erfolgreich erstellt oder existiert bereits');
+
+                // Erstelle die appointments-Tabelle, falls sie nicht existiert
+                await client.query(`
+                    CREATE TABLE IF NOT EXISTS appointments (
+                        id SERIAL PRIMARY KEY,
+                        student_id INTEGER REFERENCES users(id),
+                        date TIMESTAMP NOT NULL,
+                        type VARCHAR(50) NOT NULL,
+                        status VARCHAR(20) NOT NULL CHECK (status IN ('suggested', 'accepted', 'rejected')),
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                `);
+                console.log('Appointments-Tabelle wurde erfolgreich erstellt oder existiert bereits');
                 
                 client.release();
                 break;
@@ -131,6 +145,88 @@ export async function openDb() {
                 await client.query(sql);
             } catch (error) {
                 console.error('Fehler bei Datenbankabfrage (exec):', error);
+                throw error;
+            } finally {
+                client.release();
+            }
+        },
+
+        // Spezielle Funktionen für Appointments
+        getAppointments: async (studentId, startDate, endDate) => {
+            const client = await pool.connect();
+            try {
+                const query = `
+                    SELECT a.*, u.username as student_name
+                    FROM appointments a
+                    JOIN users u ON a.student_id = u.id
+                    WHERE a.student_id = $1
+                    AND a.date BETWEEN $2 AND $3
+                    ORDER BY a.date ASC
+                `;
+                const result = await client.query(query, [studentId, startDate, endDate]);
+                return result.rows;
+            } catch (error) {
+                console.error('Fehler beim Abrufen der Termine:', error);
+                throw error;
+            } finally {
+                client.release();
+            }
+        },
+
+        createAppointment: async (appointment) => {
+            const client = await pool.connect();
+            try {
+                const query = `
+                    INSERT INTO appointments (student_id, date, type, status)
+                    VALUES ($1, $2, $3, $4)
+                    RETURNING *
+                `;
+                const result = await client.query(query, [
+                    appointment.student_id,
+                    appointment.date,
+                    appointment.type,
+                    appointment.status
+                ]);
+                return result.rows[0];
+            } catch (error) {
+                console.error('Fehler beim Erstellen des Termins:', error);
+                throw error;
+            } finally {
+                client.release();
+            }
+        },
+
+        updateAppointmentStatus: async (appointmentId, status) => {
+            const client = await pool.connect();
+            try {
+                const query = `
+                    UPDATE appointments
+                    SET status = $1, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = $2
+                    RETURNING *
+                `;
+                const result = await client.query(query, [status, appointmentId]);
+                return result.rows[0];
+            } catch (error) {
+                console.error('Fehler beim Aktualisieren des Terminstatus:', error);
+                throw error;
+            } finally {
+                client.release();
+            }
+        },
+
+        deleteAppointment: async (appointmentId) => {
+            const client = await pool.connect();
+            try {
+                const query = `
+                    DELETE FROM appointments
+                    WHERE id = $1
+                    RETURNING *
+                `;
+                const result = await client.query(query, [appointmentId]);
+                return result.rows[0];
+            } catch (error) {
+                console.error('Fehler beim Löschen des Termins:', error);
                 throw error;
             } finally {
                 client.release();

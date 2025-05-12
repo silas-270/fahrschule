@@ -2,6 +2,7 @@ import express from 'express';
 import bcrypt from 'bcrypt';
 import cors from 'cors';
 import { openDb } from './db.js';
+import jwt from 'jsonwebtoken';
 
 const app = express();
 app.use(express.json());
@@ -102,6 +103,9 @@ const adminAuth = (req, res, next) => {
     next();
 };
 
+// JWT Secret
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+
 // init DB
 (async () => {
     try {
@@ -195,67 +199,50 @@ app.post('/register', async (req, res) => {
 app.post('/login', async (req, res) => {
     try {
         const { username, password } = req.body;
-
-        if (!username || !password) {
-            return res.status(400).json({
-                success: false,
-                message: 'Benutzername und Passwort sind erforderlich'
-            });
-        }
-
+        
+        // Benutzer in der Datenbank suchen
         const db = await openDb();
         const user = await db.get('SELECT * FROM users WHERE username = $1', [username]);
-
+        
         if (!user) {
-            // Verzögerung bei fehlgeschlagenem Login
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            return res.status(401).json({
-                success: false,
-                message: 'Ungültige Anmeldedaten'
-            });
+            return res.status(401).json({ message: 'Ungültige Anmeldedaten' });
         }
 
-        // Prüfe auf zu viele fehlgeschlagene Versuche
-        if (user.failed_attempts >= 5) {
-            const lastAttempt = new Date(user.last_login);
-            const lockoutTime = 15 * 60 * 1000; // 15 Minuten
-            if (Date.now() - lastAttempt < lockoutTime) {
-                return res.status(429).json({
-                    success: false,
-                    message: 'Zu viele fehlgeschlagene Versuche. Bitte versuchen Sie es später erneut.'
-                });
-            }
-            // Reset failed attempts after lockout period
-            await db.run('UPDATE users SET failed_attempts = 0 WHERE id = $1', [user.id]);
+        // Passwort überprüfen
+        const validPassword = await bcrypt.compare(password, user.password);
+        if (!validPassword) {
+            // Fehlgeschlagene Anmeldeversuche aktualisieren
+            await db.run(
+                'UPDATE users SET failed_attempts = failed_attempts + 1 WHERE id = $1',
+                [user.id]
+            );
+            return res.status(401).json({ message: 'Ungültige Anmeldedaten' });
         }
 
-        const match = await bcrypt.compare(password, user.password);
-        if (!match) {
-            // Erhöhe fehlgeschlagene Versuche
-            await db.run('UPDATE users SET failed_attempts = failed_attempts + 1, last_login = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
-            return res.status(401).json({
-                success: false,
-                message: 'Ungültige Anmeldedaten'
-            });
-        }
+        // Fehlgeschlagene Anmeldeversuche zurücksetzen
+        await db.run(
+            'UPDATE users SET failed_attempts = 0, last_login = CURRENT_TIMESTAMP WHERE id = $1',
+            [user.id]
+        );
 
-        // Reset failed attempts and update last login on successful login
-        await db.run('UPDATE users SET failed_attempts = 0, last_login = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
+        // JWT Token generieren
+        const token = jwt.sign(
+            { id: user.id, username: user.username },
+            JWT_SECRET,
+            { expiresIn: '24h' }
+        );
 
         res.json({
-            success: true,
             message: 'Login erfolgreich',
+            token,
             user: {
                 id: user.id,
                 username: user.username
             }
         });
     } catch (error) {
-        console.error('Login-Fehler:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Ein Fehler ist aufgetreten'
-        });
+        console.error('Login error:', error);
+        res.status(500).json({ message: 'Interner Serverfehler' });
     }
 });
 
@@ -397,6 +384,170 @@ app.post('/admin/users/:id/reset-password', adminAuth, async (req, res) => {
             success: false,
             message: 'Ein Fehler ist aufgetreten'
         });
+    }
+});
+
+// Termine abrufen
+app.get('/appointments', async (req, res) => {
+    try {
+        const token = req.headers.authorization?.split(' ')[1];
+        if (!token) {
+            return res.status(401).json({ message: 'Nicht authentifiziert' });
+        }
+
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const { startDate, endDate } = req.query;
+
+        if (!startDate || !endDate) {
+            return res.status(400).json({ message: 'Start- und Enddatum erforderlich' });
+        }
+
+        const db = await openDb();
+        const appointments = await db.getAppointments(decoded.id, startDate, endDate);
+        res.json(appointments);
+    } catch (error) {
+        console.error('Fehler beim Abrufen der Termine:', error);
+        res.status(500).json({ message: 'Interner Serverfehler' });
+    }
+});
+
+// Neuen Termin erstellen (Admin)
+app.post('/appointments', adminAuth, async (req, res) => {
+    try {
+        const { student_id, date, type } = req.body;
+
+        if (!student_id || !date || !type) {
+            return res.status(400).json({ message: 'Alle Felder sind erforderlich' });
+        }
+
+        const db = await openDb();
+        const appointment = await db.createAppointment({
+            student_id,
+            date,
+            type,
+            status: 'suggested'
+        });
+
+        res.status(201).json(appointment);
+    } catch (error) {
+        console.error('Fehler beim Erstellen des Termins:', error);
+        res.status(500).json({ message: 'Interner Serverfehler' });
+    }
+});
+
+// Termin annehmen
+app.put('/appointments/:id/accept', async (req, res) => {
+    try {
+        const token = req.headers.authorization?.split(' ')[1];
+        if (!token) {
+            return res.status(401).json({ message: 'Nicht authentifiziert' });
+        }
+
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const appointmentId = req.params.id;
+
+        // Prüfen, ob der Termin dem Benutzer gehört
+        const db = await openDb();
+        const appointment = await db.get(
+            'SELECT * FROM appointments WHERE id = $1 AND student_id = $2',
+            [appointmentId, decoded.id]
+        );
+
+        if (!appointment) {
+            return res.status(404).json({ message: 'Termin nicht gefunden' });
+        }
+
+        if (appointment.status !== 'suggested') {
+            return res.status(400).json({ message: 'Termin kann nicht mehr angenommen werden' });
+        }
+
+        const updatedAppointment = await db.updateAppointmentStatus(appointmentId, 'accepted');
+        res.json(updatedAppointment);
+    } catch (error) {
+        console.error('Fehler beim Annehmen des Termins:', error);
+        res.status(500).json({ message: 'Interner Serverfehler' });
+    }
+});
+
+// Termin ablehnen
+app.put('/appointments/:id/reject', async (req, res) => {
+    try {
+        const token = req.headers.authorization?.split(' ')[1];
+        if (!token) {
+            return res.status(401).json({ message: 'Nicht authentifiziert' });
+        }
+
+        const decoded = jwt.verify(token, JWT_SECRET);
+        const appointmentId = req.params.id;
+
+        // Prüfen, ob der Termin dem Benutzer gehört
+        const db = await openDb();
+        const appointment = await db.get(
+            'SELECT * FROM appointments WHERE id = $1 AND student_id = $2',
+            [appointmentId, decoded.id]
+        );
+
+        if (!appointment) {
+            return res.status(404).json({ message: 'Termin nicht gefunden' });
+        }
+
+        if (appointment.status !== 'suggested') {
+            return res.status(400).json({ message: 'Termin kann nicht mehr abgelehnt werden' });
+        }
+
+        const updatedAppointment = await db.updateAppointmentStatus(appointmentId, 'rejected');
+        res.json(updatedAppointment);
+    } catch (error) {
+        console.error('Fehler beim Ablehnen des Termins:', error);
+        res.status(500).json({ message: 'Interner Serverfehler' });
+    }
+});
+
+// Termin bearbeiten (Admin)
+app.put('/appointments/:id', adminAuth, async (req, res) => {
+    try {
+        const appointmentId = req.params.id;
+        const { date, type } = req.body;
+
+        if (!date || !type) {
+            return res.status(400).json({ message: 'Datum und Typ sind erforderlich' });
+        }
+
+        const db = await openDb();
+        const query = `
+            UPDATE appointments
+            SET date = $1, type = $2, updated_at = CURRENT_TIMESTAMP
+            WHERE id = $3
+            RETURNING *
+        `;
+        const result = await db.run(query, [date, type, appointmentId]);
+
+        if (result.changes === 0) {
+            return res.status(404).json({ message: 'Termin nicht gefunden' });
+        }
+
+        res.json(result);
+    } catch (error) {
+        console.error('Fehler beim Bearbeiten des Termins:', error);
+        res.status(500).json({ message: 'Interner Serverfehler' });
+    }
+});
+
+// Termin löschen (Admin)
+app.delete('/appointments/:id', adminAuth, async (req, res) => {
+    try {
+        const appointmentId = req.params.id;
+        const db = await openDb();
+        const deletedAppointment = await db.deleteAppointment(appointmentId);
+
+        if (!deletedAppointment) {
+            return res.status(404).json({ message: 'Termin nicht gefunden' });
+        }
+
+        res.json({ message: 'Termin erfolgreich gelöscht', appointment: deletedAppointment });
+    } catch (error) {
+        console.error('Fehler beim Löschen des Termins:', error);
+        res.status(500).json({ message: 'Interner Serverfehler' });
     }
 });
 
