@@ -155,6 +155,14 @@ export async function openDb() {
         getAppointments: async (studentId, startDate, endDate) => {
             const client = await pool.connect();
             try {
+                // Debug: Zeige alle Termine in der Datenbank
+                const allAppointments = await client.query('SELECT * FROM appointments');
+                console.log('Alle Termine in der Datenbank:', allAppointments.rows);
+
+                // Debug: Zeige alle Benutzer in der Datenbank
+                const allUsers = await client.query('SELECT * FROM users');
+                console.log('Alle Benutzer in der Datenbank:', allUsers.rows);
+
                 const query = `
                     SELECT a.*, u.username as student_name
                     FROM appointments a
@@ -164,9 +172,11 @@ export async function openDb() {
                     AND a.date <= $3::timestamp
                     ORDER BY a.date ASC
                 `;
-                console.log('Executing query with params:', { studentId, startDate, endDate }); // Debug output
+                console.log('SQL Query:', query);
+                console.log('Query parameters:', { studentId, startDate, endDate });
+                
                 const result = await client.query(query, [studentId, startDate, endDate]);
-                console.log('Query result:', result.rows); // Debug output
+                console.log('Query result:', result.rows);
                 return result.rows;
             } catch (error) {
                 console.error('Fehler beim Abrufen der Termine:', error);
