@@ -4,8 +4,10 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
     
+    const API_URL = window.API_BASE_URL || 'https://fahrschule-backend.up.railway.app';
+    
     try {
-        const response = await fetch('https://fahrschule-backend.up.railway.app/login', {
+        const response = await fetch(`${API_URL}/login`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

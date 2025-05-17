@@ -1,15 +1,11 @@
-const config = {
-    development: {
-        backendUrl: 'http://localhost:3000'
-    },
-    production: {
-        backendUrl: 'https://fahrschule-login-production.up.railway.app'
-    }
-};
+// Frontend Konfiguration
+window.API_BASE_URL = 'https://fahrschule-backend.up.railway.app'; // Kann in der index.html überschrieben werden
 
-// Automatische Umgebungserkennung
-const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const environment = isDevelopment ? 'development' : 'production';
-
-// Exportiere die Konfiguration
-window.APP_CONFIG = config[environment]; 
+// Weitere Konfigurationsoptionen können hier hinzugefügt werden
+window.APP_CONFIG = {
+    sessionTimeout: 30 * 60 * 1000, // 30 Minuten
+    maxFailedAttempts: 5,
+    refreshTokenInterval: 14 * 60 * 1000, // 14 Minuten
+    dateFormat: 'DD.MM.YYYY',
+    timeFormat: 'HH:mm'
+}; 

@@ -1,6 +1,6 @@
 // Globale Variablen
 let currentWeekOffset = 0;
-const API_BASE_URL = 'https://fahrschule-production.up.railway.app';
+const API_BASE_URL = window.API_BASE_URL || 'https://fahrschule-backend.up.railway.app';
 const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 Minuten in Millisekunden
 
 // Funktion zum Aktualisieren des Access Tokens
