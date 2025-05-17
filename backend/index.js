@@ -3,28 +3,41 @@ import bcrypt from 'bcrypt';
 import cors from 'cors';
 import { openDb } from './db.js';
 import jwt from 'jsonwebtoken';
+import {
+    generateCSRFToken,
+    sanitizeInput,
+    validateUsername,
+    validatePassword,
+    generateRefreshToken,
+    verifyRefreshToken,
+    securityHeaders,
+    validateRequest,
+    errorLogger,
+    validateSession
+} from './security.js';
 
 const app = express();
 
 // CORS-Konfiguration
 const corsOptions = {
-    origin: '*', // In Produktion sollte dies auf deine spezifische Domain beschränkt werden
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'admin-token'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
     credentials: true
 };
 
 app.use(cors(corsOptions));
 app.use(express.json());
+app.use(securityHeaders);
 
 const PORT = process.env.PORT || 3000;
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN;
+const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
 
-// Überprüfe, ob ADMIN_TOKEN gesetzt ist
-if (!ADMIN_TOKEN) {
-    console.error('WARNUNG: ADMIN_TOKEN ist nicht in den Umgebungsvariablen gesetzt!');
-    console.error('Bitte setzen Sie den ADMIN_TOKEN in Railway unter Variables.');
-    console.error('Die Admin-Routen werden ohne Token nicht funktionieren.');
+// Überprüfe, ob JWT_SECRET gesetzt ist
+if (!JWT_SECRET || !JWT_REFRESH_SECRET) {
+    console.error('WARNUNG: JWT_SECRET oder JWT_REFRESH_SECRET ist nicht in den Umgebungsvariablen gesetzt!');
+    process.exit(1);
 }
 
 // Logging Middleware
@@ -34,6 +47,7 @@ app.use((req, res, next) => {
 });
 
 // Error Handling Middleware
+app.use(errorLogger);
 app.use((err, req, res, next) => {
     console.error('Fehler:', err);
     res.status(500).json({
@@ -41,6 +55,35 @@ app.use((err, req, res, next) => {
         message: 'Ein interner Fehler ist aufgetreten',
         error: process.env.NODE_ENV === 'development' ? err.message : undefined
     });
+});
+
+// CSRF Token Middleware
+app.use((req, res, next) => {
+    if (req.method === 'GET') {
+        const csrfToken = generateCSRFToken();
+        res.cookie('csrf_token', csrfToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict'
+        });
+    }
+    next();
+});
+
+// CSRF Protection Middleware
+app.use((req, res, next) => {
+    if (['POST', 'PUT', 'DELETE'].includes(req.method)) {
+        const csrfToken = req.headers['x-csrf-token'];
+        const cookieToken = req.cookies.csrf_token;
+        
+        if (!csrfToken || !cookieToken || csrfToken !== cookieToken) {
+            return res.status(403).json({
+                success: false,
+                message: 'CSRF-Token ungültig'
+            });
+        }
+    }
+    next();
 });
 
 // Middleware für Rate Limiting
@@ -83,14 +126,6 @@ app.use((req, res, next) => {
 const adminAuth = (req, res, next) => {
     const token = req.headers['admin-token'];
     
-    if (!ADMIN_TOKEN) {
-        console.error('ADMIN_TOKEN ist nicht in den Umgebungsvariablen gesetzt!');
-        return res.status(500).json({
-            success: false,
-            message: 'Server-Konfigurationsfehler: ADMIN_TOKEN nicht gesetzt'
-        });
-    }
-    
     if (!token) {
         return res.status(401).json({
             success: false,
@@ -100,7 +135,7 @@ const adminAuth = (req, res, next) => {
     
     // Trimme beide Tokens und vergleiche sie
     const trimmedToken = token.trim();
-    const trimmedAdminToken = ADMIN_TOKEN.trim();
+    const trimmedAdminToken = process.env.ADMIN_TOKEN.trim();
     
     if (trimmedToken !== trimmedAdminToken) {
         return res.status(401).json({
@@ -111,9 +146,6 @@ const adminAuth = (req, res, next) => {
     
     next();
 };
-
-// JWT Secret
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 // Token Validierung Middleware
 const validateToken = (req, res, next) => {
@@ -144,7 +176,8 @@ const validateToken = (req, res, next) => {
             role TEXT DEFAULT 'student',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             last_login TIMESTAMP,
-            failed_attempts INTEGER DEFAULT 0
+            failed_attempts INTEGER DEFAULT 0,
+            refresh_token TEXT
         )`);
 
         // Testuser nur erstellen, wenn keine Benutzer existieren
@@ -165,44 +198,34 @@ const validateToken = (req, res, next) => {
     }
 })();
 
-// Validierungsfunktionen
-const validateUsername = (username) => {
-    if (!username || username.length < 3 || username.length > 20) {
-        return false;
-    }
-    return /^[a-zA-Z0-9_]+$/.test(username);
-};
-
-const validatePassword = (password) => {
-    if (!password || password.length < 8) {
-        return false;
-    }
-    return true;
-};
-
-// Registrierungs-Route
+// Registrierungs-Route mit verbesserter Validierung
 app.post('/register', async (req, res) => {
     try {
         const { username, password } = req.body;
 
-        if (!validateUsername(username)) {
+        // Input sanitization
+        const sanitizedUsername = sanitizeInput(username);
+        const sanitizedPassword = sanitizeInput(password);
+
+        // Validation
+        if (!validateUsername(sanitizedUsername)) {
             return res.status(400).json({
                 success: false,
                 message: 'Benutzername muss zwischen 3 und 20 Zeichen lang sein und darf nur Buchstaben, Zahlen und Unterstriche enthalten.'
             });
         }
 
-        if (!validatePassword(password)) {
+        if (!validatePassword(sanitizedPassword)) {
             return res.status(400).json({
                 success: false,
-                message: 'Passwort muss mindestens 8 Zeichen lang sein.'
+                message: 'Passwort muss mindestens 8 Zeichen lang sein und mindestens einen Großbuchstaben, einen Kleinbuchstaben und eine Zahl enthalten.'
             });
         }
 
         const db = await openDb();
         
         // Prüfen ob Benutzer bereits existiert
-        const existingUser = await db.get('SELECT * FROM users WHERE username = ?', [username]);
+        const existingUser = await db.get('SELECT * FROM users WHERE username = $1', [sanitizedUsername]);
         if (existingUser) {
             return res.status(400).json({
                 success: false,
@@ -210,8 +233,8 @@ app.post('/register', async (req, res) => {
             });
         }
 
-        const hash = await bcrypt.hash(password, 10);
-        await db.run('INSERT INTO users (username, password) VALUES (?, ?)', [username, hash]);
+        const hash = await bcrypt.hash(sanitizedPassword, 12);
+        await db.run('INSERT INTO users (username, password) VALUES ($1, $2)', [sanitizedUsername, hash]);
 
         res.status(201).json({
             success: true,
@@ -226,23 +249,28 @@ app.post('/register', async (req, res) => {
     }
 });
 
-// Login-Route
+// Login-Route mit Refresh Token
 app.post('/login', async (req, res) => {
     try {
         const { username, password } = req.body;
         
-        // Benutzer in der Datenbank suchen
+        // Input sanitization
+        const sanitizedUsername = sanitizeInput(username);
+        const sanitizedPassword = sanitizeInput(password);
+        
+        console.log('Login attempt for user:', sanitizedUsername); // Debug
+        
         const db = await openDb();
-        const user = await db.get('SELECT * FROM users WHERE username = $1', [username]);
+        const user = await db.get('SELECT * FROM users WHERE username = $1', [sanitizedUsername]);
         
         if (!user) {
+            console.log('User not found:', sanitizedUsername); // Debug
             return res.status(401).json({ message: 'Ungültige Anmeldedaten' });
         }
 
-        // Passwort überprüfen
-        const validPassword = await bcrypt.compare(password, user.password);
+        const validPassword = await bcrypt.compare(sanitizedPassword, user.password);
         if (!validPassword) {
-            // Fehlgeschlagene Anmeldeversuche aktualisieren
+            console.log('Invalid password for user:', sanitizedUsername); // Debug
             await db.run(
                 'UPDATE users SET failed_attempts = failed_attempts + 1 WHERE id = $1',
                 [user.id]
@@ -250,42 +278,120 @@ app.post('/login', async (req, res) => {
             return res.status(401).json({ message: 'Ungültige Anmeldedaten' });
         }
 
-        // Fehlgeschlagene Anmeldeversuche zurücksetzen
+        // Reset failed attempts
         await db.run(
             'UPDATE users SET failed_attempts = 0, last_login = CURRENT_TIMESTAMP WHERE id = $1',
             [user.id]
         );
 
-        // JWT Token generieren
-        const token = jwt.sign(
-            { 
-                id: user.id, 
-                username: user.username,
-                role: user.role 
-            },
+        // Generate tokens
+        const accessToken = jwt.sign(
+            { id: user.id, username: user.username, role: user.role },
             JWT_SECRET,
-            { expiresIn: '24h' }
+            { expiresIn: '30m' }
+        );
+        
+        const refreshToken = generateRefreshToken(user.id);
+
+        // Store refresh token in database
+        await db.run(
+            'UPDATE users SET refresh_token = $1 WHERE id = $2',
+            [refreshToken, user.id]
         );
 
-        // Wenn der Benutzer ein Admin ist, füge den Admin-Token hinzu
-        const responseData = {
-            message: 'Login erfolgreich',
-            token,
+        console.log('Login successful for user:', user.username); // Debug
+
+        res.json({
+            success: true,
+            token: accessToken,
+            refreshToken: refreshToken,
             user: {
                 id: user.id,
                 username: user.username,
                 role: user.role
             }
-        };
-
-        if (user.role === 'admin') {
-            responseData.adminToken = ADMIN_TOKEN;
-        }
-
-        res.json(responseData);
+        });
     } catch (error) {
         console.error('Login error:', error);
-        res.status(500).json({ message: 'Interner Serverfehler' });
+        res.status(500).json({
+            success: false,
+            message: 'Ein Fehler ist aufgetreten'
+        });
+    }
+});
+
+// Refresh Token Route
+app.post('/refresh-token', async (req, res) => {
+    try {
+        const { refreshToken } = req.body;
+        
+        if (!refreshToken) {
+            return res.status(400).json({
+                success: false,
+                message: 'Refresh Token fehlt'
+            });
+        }
+
+        const decoded = verifyRefreshToken(refreshToken);
+        if (!decoded) {
+            return res.status(401).json({
+                success: false,
+                message: 'Ungültiger Refresh Token'
+            });
+        }
+
+        const db = await openDb();
+        const user = await db.get(
+            'SELECT * FROM users WHERE id = $1 AND refresh_token = $2',
+            [decoded.userId, refreshToken]
+        );
+
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                message: 'Ungültiger Refresh Token'
+            });
+        }
+
+        // Generate new access token
+        const accessToken = jwt.sign(
+            { id: user.id, username: user.username, role: user.role },
+            JWT_SECRET,
+            { expiresIn: '30m' }
+        );
+
+        res.json({
+            success: true,
+            token: accessToken
+        });
+    } catch (error) {
+        console.error('Refresh token error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Ein Fehler ist aufgetreten'
+        });
+    }
+});
+
+// Logout Route
+app.post('/logout', validateSession, async (req, res) => {
+    try {
+        const db = await openDb();
+        await db.run(
+            'UPDATE users SET refresh_token = NULL WHERE id = $1',
+            [req.user.id]
+        );
+
+        res.json({
+            success: true,
+            message: 'Erfolgreich abgemeldet'
+        });
+    } catch (error) {
+        console.error('Logout error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Ein Fehler ist aufgetreten'
+        });
     }
 });
 
@@ -670,5 +776,5 @@ app.get('/debug', validateToken, async (req, res) => {
 
 // Starte den Server
 app.listen(PORT, () => {
-    console.log(`Backend läuft auf Port ${PORT}`);
+    console.log(`Server läuft auf Port ${PORT}`);
 });

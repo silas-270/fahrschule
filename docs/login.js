@@ -5,10 +5,21 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     const password = document.getElementById('password').value;
     
     try {
-        const response = await fetch('https://fahrschule-backend.up.railway.app/login', {
+        // Hole CSRF-Token aus dem Cookie
+        const csrfToken = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('csrf_token='))
+            ?.split('=')[1];
+
+        if (!csrfToken) {
+            throw new Error('CSRF-Token nicht gefunden');
+        }
+
+        const response = await fetch('https://fahrschule-production.up.railway.app/login', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
             },
             body: JSON.stringify({ username, password })
         });
@@ -19,10 +30,26 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
             // Speichere Session-Daten mit Login-Zeitpunkt
             const sessionData = {
                 token: data.token,
-                username: username,
-                lastActivity: Date.now()
+                refreshToken: data.refreshToken,
+                username: data.user.username,
+                role: data.user.role,
+                timestamp: Date.now()
             };
+            
+            // Debug-Ausgabe
+            console.log('Storing session data:', sessionData);
+            
+            // Speichere die Session
             localStorage.setItem('session', JSON.stringify(sessionData));
+            
+            // Überprüfe, ob die Session gespeichert wurde
+            const storedSession = localStorage.getItem('session');
+            console.log('Stored session:', storedSession);
+            
+            if (!storedSession) {
+                throw new Error('Failed to store session data');
+            }
+            
             // Weiterleitung zum Dashboard
             window.location.href = 'dashboard.html';
         } else {
