@@ -141,6 +141,7 @@ const validateToken = (req, res, next) => {
             id SERIAL PRIMARY KEY,
             username TEXT UNIQUE,
             password TEXT,
+            role TEXT DEFAULT 'student',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             last_login TIMESTAMP,
             failed_attempts INTEGER DEFAULT 0
@@ -150,8 +151,12 @@ const validateToken = (req, res, next) => {
         const userCount = await db.get('SELECT COUNT(*) as count FROM users');
         if (userCount.count === 0) {
             const hash = await bcrypt.hash('passwort123', 12);
-            await db.run('INSERT INTO users (username, password) VALUES ($1, $2)', ['test', hash]);
+            await db.run('INSERT INTO users (username, password, role) VALUES ($1, $2, $3)', ['test', hash, 'student']);
+            // Admin-Benutzer erstellen
+            const adminHash = await bcrypt.hash('admin123', 12);
+            await db.run('INSERT INTO users (username, password, role) VALUES ($1, $2, $3)', ['admin', adminHash, 'admin']);
             console.log('Testnutzer erstellt: test / passwort123');
+            console.log('Admin erstellt: admin / admin123');
         }
         console.log('Datenbank-Initialisierung abgeschlossen');
     } catch (error) {
@@ -253,19 +258,31 @@ app.post('/login', async (req, res) => {
 
         // JWT Token generieren
         const token = jwt.sign(
-            { id: user.id, username: user.username },
+            { 
+                id: user.id, 
+                username: user.username,
+                role: user.role 
+            },
             JWT_SECRET,
             { expiresIn: '24h' }
         );
 
-        res.json({
+        // Wenn der Benutzer ein Admin ist, füge den Admin-Token hinzu
+        const responseData = {
             message: 'Login erfolgreich',
             token,
             user: {
                 id: user.id,
-                username: user.username
+                username: user.username,
+                role: user.role
             }
-        });
+        };
+
+        if (user.role === 'admin') {
+            responseData.adminToken = ADMIN_TOKEN;
+        }
+
+        res.json(responseData);
     } catch (error) {
         console.error('Login error:', error);
         res.status(500).json({ message: 'Interner Serverfehler' });

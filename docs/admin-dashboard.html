@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fahrlehrer Dashboard - Fahrspur 24</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: #212121;
+            color: #F3F3F3;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            background: #303030;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 500;
+        }
+
+        .logout-btn {
+            background: #424242;
+            color: #F3F3F3;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .logout-btn:hover {
+            background: #484848;
+        }
+
+        .welcome-message {
+            margin: 2rem 0;
+            padding: 1rem;
+            background: #303030;
+            border-radius: 8px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>Fahrlehrer Dashboard</h1>
+            <button class="logout-btn" onclick="logout()">Abmelden</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="welcome-message">
+            <h2>Willkommen im Fahrlehrer-Bereich</h2>
+            <p>Hier können Sie Ihre Fahrschüler und Termine verwalten.</p>
+        </div>
+        
+        <div style="margin-top: 2rem; text-align: center;">
+            <button onclick="createTestAppointment()" style="background: #424242; color: #F3F3F3; border: none; padding: 1rem 2rem; border-radius: 8px; cursor: pointer;">
+                Test: Termin erstellen
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'https://fahrschule-production.up.railway.app';
+
+        // Hilfsfunktion für Admin-Anfragen
+        async function adminRequest(endpoint, method = 'GET', body = null) {
+            const session = JSON.parse(localStorage.getItem('session'));
+            if (!session || session.role !== 'admin' || !session.adminToken) {
+                throw new Error('Nicht autorisiert');
+            }
+
+            const headers = {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session.token}`,
+                'admin-token': session.adminToken
+            };
+
+            const options = {
+                method,
+                headers
+            };
+
+            if (body) {
+                options.body = JSON.stringify(body);
+            }
+
+            const response = await fetch(`${API_URL}${endpoint}`, options);
+            if (!response.ok) {
+                throw new Error('Anfrage fehlgeschlagen');
+            }
+
+            return await response.json();
+        }
+
+        // Test-Funktion zum Erstellen eines Termins
+        async function createTestAppointment() {
+            try {
+                const appointment = await adminRequest('/appointments', 'POST', {
+                    student_id: 1,
+                    date: '2025-05-17T18:00:00',
+                    type: 'Fahrstunde'
+                });
+                alert('Termin erfolgreich erstellt!');
+                console.log('Erstellter Termin:', appointment);
+            } catch (error) {
+                alert('Fehler beim Erstellen des Termins: ' + error.message);
+                console.error('Fehler:', error);
+            }
+        }
+
+        // Prüfe ob der Benutzer eingeloggt ist und ein Admin ist
+        window.addEventListener('load', () => {
+            const session = JSON.parse(localStorage.getItem('session'));
+            if (!session || session.role !== 'admin') {
+                window.location.href = 'index.html';
+            }
+        });
+
+        function logout() {
+            localStorage.removeItem('session');
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html> 

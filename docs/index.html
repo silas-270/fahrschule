@@ -165,16 +165,27 @@
                     // Speichere Session-Informationen
                     const sessionData = {
                         username: data.user.username,
+                        role: data.user.role,
                         token: data.token,
                         timestamp: Date.now()
                     };
-                    console.log('Storing session data:', sessionData); // Debug output
+
+                    // Wenn Admin-Token vorhanden, speichere ihn
+                    if (data.adminToken) {
+                        sessionData.adminToken = data.adminToken;
+                    }
                     
+                    console.log('Storing session data:', sessionData); // Debug output
                     localStorage.setItem('session', JSON.stringify(sessionData));
                     
                     showMessage('Login erfolgreich! Weiterleitung...');
                     setTimeout(() => {
-                        window.location.href = 'dashboard.html';
+                        // Prüfe die Benutzerrolle
+                        if (data.user.role === 'admin') {
+                            window.location.href = 'admin-dashboard.html';
+                        } else {
+                            window.location.href = 'dashboard.html';
+                        }
                     }, 1000);
                 } else {
                     showMessage(data.message || 'Login fehlgeschlagen', true);
