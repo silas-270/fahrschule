@@ -33,7 +33,7 @@
             transition: width 0.3s ease;
             overflow: hidden;
             position: fixed;
-            top: 64px;
+            top: 80px; /* Angepasst an Header-Höhe */
             bottom: 0;
             left: 0;
         }
@@ -53,15 +53,55 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            border-bottom: 1px solid #424242;
         }
 
         .sidebar-toggle:hover {
             background: #424242;
         }
 
+        .add-user-button {
+            padding: 0.5rem;
+            background: none;
+            border: none;
+            color: #F3F3F3;
+            cursor: pointer;
+            width: 100%;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-bottom: 1px solid #424242;
+        }
+
+        .add-user-button .button-text {
+            transition: all 0.3s ease;
+            max-width: 200px;
+        }
+
+        .sidebar:not(.expanded) .add-user-button .button-text {
+            max-width: 0;
+            opacity: 0;
+            margin: 0;
+        }
+
+        .add-user-button:hover {
+            background: #424242;
+        }
+
+        .add-user-button .material-icons {
+            font-size: 1.1rem;
+            margin-right: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        .sidebar:not(.expanded) .add-user-button .material-icons {
+            margin-right: 0;
+        }
+
         /* Verstecke horizontale Scrollbar */
         .user-list {
-            height: calc(100vh - 114px);
+            height: calc(100vh - 130px); /* Angepasst: 80px Header + 50px für Toggle und Add-Button */
             overflow-y: auto;
             overflow-x: hidden;
         }
@@ -123,6 +163,7 @@
             overflow-y: auto;
             margin-left: 40px; /* Sidebar width when collapsed */
             transition: margin-left 0.3s ease;
+            margin-top: 96px; /* 80px Header + 16px Abstand */
         }
 
         .main-content.expanded {
@@ -138,30 +179,39 @@
             left: 0;
             right: 0;
             z-index: 100;
-            height: 64px;
+            height: 80px;
+            display: flex;
+            align-items: center;
         }
 
         .header-content {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
+            padding: 0 2rem;
+            width: 100%;
         }
 
         h1 {
-            font-size: 1.5rem;
+            font-size: 1.8rem;
             font-weight: 500;
+            margin: 0;
+            line-height: 1;
         }
 
         .logout-btn {
             background: #424242;
             color: #F3F3F3;
             border: none;
-            padding: 0.5rem 1rem;
+            padding: 0.75rem 1.5rem;
             border-radius: 4px;
             cursor: pointer;
             transition: background 0.2s;
+            font-size: 1.1rem;
+            margin: 0;
+            line-height: 1;
         }
 
         .logout-btn:hover {
@@ -170,7 +220,7 @@
 
         /* Calendar Styles */
         .calendar {
-            margin-top: 80px;
+            margin-top: 0; /* Entferne den alten margin-top */
             background: #303030;
             border-radius: 8px;
             padding: 1rem;
@@ -222,7 +272,7 @@
         }
 
         .appointment {
-            background: #4CAF50;
+            background: #303030;
             color: white;
             padding: 0.5rem;
             margin-bottom: 0.5rem;
@@ -230,18 +280,15 @@
             cursor: pointer;
             position: relative;
             transition: all 0.2s ease;
-        }
-
-        .appointment:hover {
-            transform: scale(1.02);
+            border-left: 4px solid #4CAF50;
         }
 
         .appointment.pending {
-            background: #FFC107;
+            border-left-color: #FFC107;
         }
 
         .appointment.cancelled {
-            background: #F44336;
+            border-left-color: #F44336;
         }
 
         .appointment-title {
@@ -252,6 +299,11 @@
         .appointment-user {
             font-size: 0.9rem;
             opacity: 0.9;
+        }
+
+        .appointment-time {
+            font-size: 0.9rem;
+            opacity: 0.8;
         }
 
         .appointment-delete {
@@ -340,6 +392,96 @@
             margin-bottom: 1rem;
         }
 
+        .dialog-section {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid #424242;
+        }
+
+        .dialog-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .dialog-section-title {
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin-bottom: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #424242;
+            border-radius: 4px;
+            background: #303030;
+            color: #F3F3F3;
+            font-size: 0.9rem;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #2196F3;
+        }
+
+        .form-group input[type="datetime-local"] {
+            padding: 0.4rem;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        .title-row {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-end;
+        }
+
+        .title-row .form-group:first-child {
+            flex: 2;
+        }
+
+        .title-row .form-group:last-child {
+            flex: 1;
+        }
+
+        .time-inputs {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .time-inputs input {
+            width: 60px;
+            text-align: center;
+        }
+
+        .time-inputs span {
+            opacity: 0.7;
+        }
+
         .dialog-actions {
             display: flex;
             justify-content: flex-end;
@@ -363,6 +505,11 @@
             background: #424242;
             color: #F3F3F3;
         }
+
+        .dialog-button.danger {
+            background: #F44336;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -377,6 +524,10 @@
         <div class="sidebar" id="sidebar">
             <button class="sidebar-toggle" onclick="toggleSidebar()">
                 <span class="material-icons">chevron_right</span>
+            </button>
+            <button class="add-user-button" onclick="openNewUserDialog()">
+                <span class="material-icons">person_add</span>
+                <span class="button-text">Neuer Benutzer</span>
             </button>
             <div class="user-list" id="userList">
                 <!-- Benutzer werden hier dynamisch eingefügt -->
@@ -413,11 +564,22 @@
                 </button>
             </div>
             <div class="dialog-content">
-                <!-- Hier kommen später die Einstellungsfelder -->
+                <div class="dialog-section">
+                    <h4 class="dialog-section-title">Passwort ändern</h4>
+                    <div class="form-group">
+                        <label for="newPassword">Neues Passwort</label>
+                        <input type="password" id="newPassword" placeholder="Mindestens 8 Zeichen">
+                    </div>
+                    <button class="dialog-button primary" onclick="changePassword()">Passwort ändern</button>
+                </div>
+                <div class="dialog-section">
+                    <h4 class="dialog-section-title">Benutzer löschen</h4>
+                    <p style="margin-bottom: 1rem; opacity: 0.9;">Achtung: Diese Aktion kann nicht rückgängig gemacht werden.</p>
+                    <button class="dialog-button danger" onclick="deleteUser()">Benutzer löschen</button>
+                </div>
             </div>
             <div class="dialog-actions">
-                <button class="dialog-button secondary" onclick="closeDialog('userSettingsDialog')">Abbrechen</button>
-                <button class="dialog-button primary" onclick="saveUserSettings()">Speichern</button>
+                <button class="dialog-button secondary" onclick="closeDialog('userSettingsDialog')">Schließen</button>
             </div>
         </div>
     </div>
@@ -432,11 +594,64 @@
                 </button>
             </div>
             <div class="dialog-content">
-                <!-- Hier kommen später die Termin-Felder -->
+                <div class="title-row">
+                    <div class="form-group">
+                        <label for="appointmentTitle">Titel</label>
+                        <input type="text" id="appointmentTitle" placeholder="z.B. Überland">
+                    </div>
+                    <div class="form-group">
+                        <label for="appointmentDuration">Dauer</label>
+                        <input type="text" id="appointmentDuration" placeholder="z.B. 90min">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="appointmentDate">Datum</label>
+                    <input type="date" id="appointmentDate">
+                </div>
+                <div class="form-group">
+                    <label>Uhrzeit</label>
+                    <div class="time-inputs">
+                        <input type="number" id="appointmentHour" min="0" max="23" placeholder="00">
+                        <span>:</span>
+                        <input type="number" id="appointmentMinute" min="0" max="59" placeholder="00">
+                    </div>
+                </div>
             </div>
             <div class="dialog-actions">
                 <button class="dialog-button secondary" onclick="closeDialog('createAppointmentDialog')">Abbrechen</button>
                 <button class="dialog-button primary" onclick="saveAppointment()">Erstellen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dialog für neuen Benutzer -->
+    <div class="dialog-overlay" id="newUserDialog">
+        <div class="dialog">
+            <div class="dialog-header">
+                <h3 class="dialog-title">Neuen Benutzer erstellen</h3>
+                <button class="dialog-close" onclick="closeDialog('newUserDialog')">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <div class="dialog-content">
+                <form id="newUserForm" onsubmit="event.preventDefault(); createNewUser();">
+                    <div class="form-group">
+                        <label for="newUsername">Benutzername</label>
+                        <input type="text" id="newUsername" name="username" placeholder="Benutzername eingeben" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newPassword">Passwort</label>
+                        <input type="password" id="newPassword" name="password" placeholder="Mindestens 8 Zeichen" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPassword">Passwort bestätigen</label>
+                        <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Passwort wiederholen" required>
+                    </div>
+                    <div class="dialog-actions">
+                        <button type="button" class="dialog-button secondary" onclick="closeDialog('newUserDialog')">Abbrechen</button>
+                        <button type="submit" class="dialog-button primary">Erstellen</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -565,11 +780,12 @@
                 const endDate = new Date(weekDates[6]);
                 endDate.setHours(23, 59, 59);
 
-                const response = await adminRequest('/admin/appointments', 'GET', null, {
+                const params = new URLSearchParams({
                     start_date: startDate.toISOString(),
                     end_date: endDate.toISOString()
                 });
 
+                const response = await adminRequest(`/admin/appointments?${params.toString()}`, 'GET');
                 return response.appointments;
             } catch (error) {
                 console.error('Fehler beim Laden der Termine:', error);
@@ -610,10 +826,15 @@
                     <div class="calendar-day-content"></div>
                 `;
                 
+                // Setze die Uhrzeit auf 00:00:00 für den Vergleich
+                const compareDate = new Date(date);
+                compareDate.setHours(0, 0, 0, 0);
+                
                 // Filtere Termine für diesen Tag
                 const dayAppointments = appointments.filter(apt => {
                     const aptDate = new Date(apt.date);
-                    return aptDate.toDateString() === date.toDateString();
+                    aptDate.setHours(0, 0, 0, 0);
+                    return aptDate.getTime() === compareDate.getTime();
                 });
 
                 // Sortiere Termine nach Uhrzeit
@@ -625,14 +846,13 @@
                 const dayContent = dayElement.querySelector('.calendar-day-content');
                 dayAppointments.forEach(apt => {
                     const startTime = new Date(apt.date);
-                    const endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // 1 Stunde später
                     
                     const appointmentElement = document.createElement('div');
                     appointmentElement.className = `appointment ${getStatusClass(apt.status)}`;
                     appointmentElement.innerHTML = `
                         <div class="appointment-title">${apt.type}</div>
                         <div class="appointment-user">${apt.student_name}</div>
-                        <div class="appointment-time">${formatTime(startTime)} - ${formatTime(endTime)}</div>
+                        <div class="appointment-time">${formatTime(startTime)}</div>
                         <button class="appointment-delete" onclick="deleteAppointment(${apt.id})">
                             <span class="material-icons">delete</span>
                         </button>
@@ -644,10 +864,63 @@
             });
         }
 
+        // Dialog-Funktionen
+        let currentUserId = null;
+
+        function openUserSettings(userId) {
+            currentUserId = userId;
+            const dialog = document.getElementById('userSettingsDialog');
+            const title = document.getElementById('userSettingsTitle');
+            const user = window.users.find(u => u.id === userId);
+            if (user) {
+                title.textContent = `${user.username} bearbeiten`;
+                dialog.style.display = 'flex';
+            }
+        }
+
+        async function changePassword() {
+            if (!currentUserId) return;
+            
+            const newPassword = document.getElementById('newPassword').value;
+            if (!newPassword || newPassword.length < 8) {
+                alert('Das Passwort muss mindestens 8 Zeichen lang sein.');
+                return;
+            }
+
+            try {
+                await adminRequest(`/admin/users/${currentUserId}/reset-password`, 'POST', {
+                    newPassword
+                });
+                alert('Passwort wurde erfolgreich geändert.');
+                document.getElementById('newPassword').value = '';
+            } catch (error) {
+                console.error('Fehler beim Ändern des Passworts:', error);
+                alert('Fehler beim Ändern des Passworts');
+            }
+        }
+
+        async function deleteUser() {
+            if (!currentUserId) return;
+            
+            if (!confirm('Möchten Sie diesen Benutzer wirklich löschen?')) {
+                return;
+            }
+
+            try {
+                await adminRequest(`/admin/users/${currentUserId}`, 'DELETE');
+                alert('Benutzer wurde erfolgreich gelöscht.');
+                closeDialog('userSettingsDialog');
+                loadUsers(); // Liste neu laden
+            } catch (error) {
+                console.error('Fehler beim Löschen des Benutzers:', error);
+                alert('Fehler beim Löschen des Benutzers');
+            }
+        }
+
         async function deleteAppointment(appointmentId) {
             if (confirm('Möchten Sie diesen Termin wirklich löschen?')) {
                 try {
-                    await adminRequest(`/admin/appointments/${appointmentId}`, 'DELETE');
+                    await adminRequest(`/appointments/${appointmentId}`, 'DELETE');
                     await updateCalendar();
                 } catch (error) {
                     console.error('Fehler beim Löschen des Termins:', error);
@@ -666,24 +939,25 @@
             updateCalendar();
         }
 
-        // Dialog-Funktionen
-        function openUserSettings(userId) {
-            const dialog = document.getElementById('userSettingsDialog');
-            const title = document.getElementById('userSettingsTitle');
-            const user = window.users.find(u => u.id === userId);
-            if (user) {
-                title.textContent = `${user.username} bearbeiten`;
-                dialog.style.display = 'flex';
-            }
-        }
-
         function createAppointment(userId) {
+            currentUserId = userId;
             const dialog = document.getElementById('createAppointmentDialog');
             const title = document.getElementById('createAppointmentTitle');
             const user = window.users.find(u => u.id === userId);
             if (user) {
                 title.textContent = `Termin für ${user.username} erstellen`;
                 dialog.style.display = 'flex';
+                
+                // Setze heutiges Datum als Standard
+                const today = new Date();
+                const dateInput = document.getElementById('appointmentDate');
+                dateInput.value = today.toISOString().split('T')[0];
+                
+                // Setze aktuelle Stunde als Standard
+                const hourInput = document.getElementById('appointmentHour');
+                const minuteInput = document.getElementById('appointmentMinute');
+                hourInput.value = today.getHours().toString().padStart(2, '0');
+                minuteInput.value = today.getMinutes().toString().padStart(2, '0');
             }
         }
 
@@ -691,15 +965,78 @@
             document.getElementById(dialogId).style.display = 'none';
         }
 
-        function saveUserSettings() {
-            // Implementierung folgt
-            closeDialog('userSettingsDialog');
+        async function saveAppointment() {
+            if (!currentUserId) return;
+
+            const title = document.getElementById('appointmentTitle').value;
+            const duration = document.getElementById('appointmentDuration').value;
+            const date = document.getElementById('appointmentDate').value;
+            const hour = document.getElementById('appointmentHour').value;
+            const minute = document.getElementById('appointmentMinute').value;
+
+            if (!title || !date || !hour || !minute) {
+                alert('Bitte füllen Sie alle Pflichtfelder aus.');
+                return;
+            }
+
+            // Validiere Uhrzeit
+            const hourNum = parseInt(hour);
+            const minuteNum = parseInt(minute);
+            if (hourNum < 0 || hourNum > 23 || minuteNum < 0 || minuteNum > 59) {
+                alert('Bitte geben Sie eine gültige Uhrzeit ein.');
+                return;
+            }
+
+            // Erstelle ISO-Datetime-String in UTC
+            const dateTime = new Date(date);
+            dateTime.setHours(hourNum, minuteNum, 0, 0);
+            
+            // Kombiniere Titel und Dauer
+            const fullTitle = duration ? `${title} - ${duration}` : title;
+            
+            try {
+                await adminRequest('/appointments', 'POST', {
+                    student_id: currentUserId,
+                    date: dateTime.toISOString(),
+                    type: fullTitle
+                });
+                
+                alert('Termin wurde erfolgreich erstellt.');
+                closeDialog('createAppointmentDialog');
+                updateCalendar();
+            } catch (error) {
+                console.error('Fehler beim Erstellen des Termins:', error);
+                alert('Fehler beim Erstellen des Termins');
+            }
         }
 
-        function saveAppointment() {
-            // Implementierung folgt
-            closeDialog('createAppointmentDialog');
-        }
+        // Event-Listener für Datum-Input
+        document.getElementById('appointmentDate').addEventListener('change', function(e) {
+            const selectedDate = new Date(e.target.value);
+            const today = new Date();
+            
+            // Wenn das ausgewählte Datum in der Vergangenheit liegt
+            if (selectedDate < today) {
+                alert('Bitte wählen Sie ein zukünftiges Datum.');
+                e.target.value = today.toISOString().split('T')[0];
+            }
+        });
+
+        // Event-Listener für Stunde-Input
+        document.getElementById('appointmentHour').addEventListener('change', function(e) {
+            let value = parseInt(e.target.value);
+            if (value < 0) value = 0;
+            if (value > 23) value = 23;
+            e.target.value = value.toString().padStart(2, '0');
+        });
+
+        // Event-Listener für Minute-Input
+        document.getElementById('appointmentMinute').addEventListener('change', function(e) {
+            let value = parseInt(e.target.value);
+            if (value < 0) value = 0;
+            if (value > 59) value = 59;
+            e.target.value = value.toString().padStart(2, '0');
+        });
 
         // Initialisierung
         window.addEventListener('load', () => {
@@ -714,6 +1051,60 @@
         function logout() {
             localStorage.removeItem('session');
             window.location.href = 'index.html';
+        }
+
+        function openNewUserDialog() {
+            const dialog = document.getElementById('newUserDialog');
+            const form = document.getElementById('newUserForm');
+            dialog.style.display = 'flex';
+            form.reset();
+            document.getElementById('newUsername').focus();
+        }
+
+        async function createNewUser() {
+            const form = document.getElementById('newUserForm');
+            const formData = new FormData(form);
+            
+            const username = formData.get('username').trim();
+            const password = formData.get('password');
+            const confirmPassword = formData.get('confirmPassword');
+
+            console.log('Formular-Daten:', {
+                username,
+                password,
+                confirmPassword
+            });
+
+            if (!username || !password || !confirmPassword) {
+                alert('Bitte füllen Sie alle Felder aus.');
+                return;
+            }
+
+            if (password.length < 8) {
+                alert('Das Passwort muss mindestens 8 Zeichen lang sein.');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                alert('Die Passwörter stimmen nicht überein.');
+                return;
+            }
+
+            try {
+                const response = await adminRequest('/admin/users', 'POST', {
+                    username,
+                    password
+                });
+                
+                console.log('Server-Antwort:', response);
+                alert('Benutzer wurde erfolgreich erstellt.');
+                closeDialog('newUserDialog');
+                form.reset();
+                loadUsers(); // Liste neu laden
+            } catch (error) {
+                console.error('Fehler beim Erstellen des Benutzers:', error);
+                alert('Fehler beim Erstellen des Benutzers: ' + error.message);
+            }
         }
     </script>
 </body>

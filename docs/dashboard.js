@@ -114,13 +114,18 @@ function initializeCalendar() {
     // Berechne das Startdatum der aktuellen Woche
     const today = new Date();
     const startDate = new Date(today);
+    
     // Setze auf Montag der aktuellen Woche
     const dayOfWeek = today.getDay();
     const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Wenn Sonntag, dann -6 Tage, sonst 1 - dayOfWeek
     startDate.setDate(today.getDate() + diff + (currentWeekOffset * 7));
     
+    // Setze die Uhrzeit auf 00:00:00
+    startDate.setHours(0, 0, 0, 0);
+    
     const endDate = new Date(startDate);
     endDate.setDate(startDate.getDate() + 6);
+    endDate.setHours(23, 59, 59, 999);
     
     updateWeekTitle(startDate, endDate);
 
@@ -163,9 +168,14 @@ function displayWeekAppointments(container, startDate, appointments) {
         const date = new Date(startDate);
         date.setDate(startDate.getDate() + index);
         
+        // Setze die Uhrzeit auf 00:00:00 für den Vergleich
+        const compareDate = new Date(date);
+        compareDate.setHours(0, 0, 0, 0);
+        
         const dayAppointments = appointments.filter(apt => {
             const aptDate = new Date(apt.date);
-            return aptDate.toDateString() === date.toDateString();
+            aptDate.setHours(0, 0, 0, 0);
+            return aptDate.getTime() === compareDate.getTime();
         });
 
         dayAppointments.forEach(appointment => {
