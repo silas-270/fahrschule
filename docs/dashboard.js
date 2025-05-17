@@ -1,9 +1,128 @@
 // Globale Variablen
 let currentWeekOffset = 0;
 const API_BASE_URL = 'https://fahrschule-production.up.railway.app';
+const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 Minuten in Millisekunden
+
+// Funktion zum Aktualisieren des Access Tokens
+async function refreshAccessToken() {
+    try {
+        const session = JSON.parse(localStorage.getItem('session'));
+        if (!session || !session.refreshToken) {
+            throw new Error('Kein Refresh Token verfügbar');
+        }
+
+        const response = await fetch(`${API_BASE_URL}/refresh-token`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ refreshToken: session.refreshToken })
+        });
+
+        if (!response.ok) {
+            throw new Error('Token-Refresh fehlgeschlagen');
+        }
+
+        const data = await response.json();
+        session.accessToken = data.accessToken;
+        session.refreshToken = data.refreshToken;
+        session.lastActivity = Date.now();
+        localStorage.setItem('session', JSON.stringify(session));
+        return true;
+    } catch (error) {
+        console.error('Token-Refresh-Fehler:', error);
+        logout();
+        return false;
+    }
+}
+
+// Funktion zum Ausführen von API-Aufrufen mit Token-Refresh
+async function fetchWithAuth(url, options = {}) {
+    const session = JSON.parse(localStorage.getItem('session'));
+    if (!session || !session.accessToken) {
+        throw new Error('Keine gültige Session gefunden');
+    }
+
+    // Füge Authorization Header hinzu
+    options.headers = {
+        ...options.headers,
+        'Authorization': `Bearer ${session.accessToken}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+    };
+
+    try {
+        const response = await fetch(url, options);
+        
+        // Wenn der Token abgelaufen ist, versuche ihn zu aktualisieren
+        if (response.status === 401) {
+            const refreshSuccess = await refreshAccessToken();
+            if (refreshSuccess) {
+                // Wiederhole den ursprünglichen Request mit dem neuen Token
+                const newSession = JSON.parse(localStorage.getItem('session'));
+                options.headers['Authorization'] = `Bearer ${newSession.accessToken}`;
+                return fetch(url, options);
+            }
+        }
+        
+        return response;
+    } catch (error) {
+        console.error('API-Aufruf fehlgeschlagen:', error);
+        throw error;
+    }
+}
+
+// Funktion zum Überprüfen der Session
+function checkSession() {
+    const session = localStorage.getItem('session');
+    if (!session) {
+        logout();
+        return;
+    }
+
+    try {
+        const sessionData = JSON.parse(session);
+        const now = Date.now();
+        const lastActivity = sessionData.lastActivity || 0;
+
+        if (now - lastActivity > SESSION_TIMEOUT) {
+            console.log('Session timeout - logging out');
+            logout();
+            return;
+        }
+
+        // Aktualisiere den Zeitstempel der letzten Aktivität
+        sessionData.lastActivity = now;
+        localStorage.setItem('session', JSON.stringify(sessionData));
+    } catch (error) {
+        console.error('Session error:', error);
+        logout();
+    }
+}
+
+// Event-Listener für Benutzeraktivität
+const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+activityEvents.forEach(event => {
+    document.addEventListener(event, () => {
+        const session = localStorage.getItem('session');
+        if (session) {
+            try {
+                const sessionData = JSON.parse(session);
+                sessionData.lastActivity = Date.now();
+                localStorage.setItem('session', JSON.stringify(sessionData));
+            } catch (error) {
+                console.error('Error updating activity timestamp:', error);
+            }
+        }
+    });
+});
 
 // Session-Überprüfung beim Laden der Seite
 window.addEventListener('load', () => {
+    checkSession();
+    // Überprüfe die Session alle Minute
+    setInterval(checkSession, 60000);
+    
     const session = localStorage.getItem('session');
     console.log('Loaded session:', session); // Debug output
     
@@ -52,43 +171,26 @@ function formatDateForDisplay(date) {
 // Funktion zum Abrufen der Termine vom Backend
 async function fetchAppointments(startDate, endDate) {
     try {
-        const session = JSON.parse(localStorage.getItem('session'));
-        if (!session || !session.token) {
-            throw new Error('Keine gültige Session gefunden');
-        }
+        // Setze die Endzeit auf 23:59:59 des Enddatums
+        const endDateTime = new Date(endDate);
+        endDateTime.setHours(23, 59, 59, 999);
 
-        const params = new URLSearchParams({
-            start_date: startDate.toISOString(),
-            end_date: endDate.toISOString()
-        });
+        // Erstelle die URL mit den korrekten Parameter-Namen
+        const url = new URL(`${API_BASE_URL}/appointments`);
+        url.searchParams.append('start_date', startDate.toISOString());
+        url.searchParams.append('end_date', endDateTime.toISOString());
 
-        const url = `${API_BASE_URL}/appointments?${params.toString()}`;
-        console.log('Fetching appointments from:', url); // Debug output
+        console.log('Fetching appointments from:', url.toString());
 
-        const headers = {
-            'Authorization': `Bearer ${session.token}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        };
-        console.log('Request headers:', headers); // Debug output
-
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: headers,
-            mode: 'cors'
-        });
-
-        console.log('Response status:', response.status); // Debug output
-        console.log('Response headers:', Object.fromEntries(response.headers.entries())); // Debug output
-
+        const response = await fetchWithAuth(url.toString());
+        
         if (!response.ok) {
             const errorText = await response.text();
-            console.error('Error response:', errorText); // Debug output
+            console.error('Error response:', errorText);
             throw new Error(`Failed to fetch appointments: ${response.status} ${errorText}`);
         }
 
         const data = await response.json();
-        console.log('Fetched appointments:', data); // Debug output
         return data.appointments;
     } catch (error) {
         console.error('Error fetching appointments:', error);
@@ -114,8 +216,7 @@ let currentWeekData = null;
 
 function initializeCalendar() {
     const appointmentsContainer = document.getElementById('appointments');
-    appointmentsContainer.innerHTML = ''; // Clear existing content
-
+    
     // Berechne das Startdatum der aktuellen Woche
     const today = new Date();
     const startDate = new Date(today);
@@ -130,21 +231,6 @@ function initializeCalendar() {
     updateWeekTitle(startDate, endDate);
 
     const days = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
-
-    // Erstelle Container für die nächsten 7 Tage
-    for (let i = 0; i < 7; i++) {
-        const date = new Date(startDate);
-        date.setDate(startDate.getDate() + i);
-        
-        const dayContainer = document.createElement('div');
-        dayContainer.className = 'day-container';
-        
-        const dayHeader = document.createElement('h3');
-        dayHeader.textContent = `${days[date.getDay()]}, ${formatDateForDisplay(date)}`;
-        dayContainer.appendChild(dayHeader);
-        
-        appointmentsContainer.appendChild(dayContainer);
-    }
 
     // Nur Abfragen, wenn sich die Woche geändert hat
     const weekKey = `${startDate.toISOString()}-${endDate.toISOString()}`;
@@ -164,20 +250,38 @@ function initializeCalendar() {
 }
 
 function displayWeekAppointments(container, startDate, appointments) {
-    Array.from(container.children).forEach((dayContainer, index) => {
+    // Clear the entire container first
+    container.innerHTML = '';
+
+    const days = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+
+    // Create new day containers
+    for (let i = 0; i < 7; i++) {
         const date = new Date(startDate);
-        date.setDate(startDate.getDate() + index);
+        date.setDate(startDate.getDate() + i);
+        
+        const dayContainer = document.createElement('div');
+        dayContainer.className = 'day-container';
+        
+        const dayHeader = document.createElement('h3');
+        dayHeader.textContent = `${days[date.getDay()]}, ${formatDateForDisplay(date)}`;
+        dayContainer.appendChild(dayHeader);
         
         const dayAppointments = appointments.filter(apt => {
             const aptDate = new Date(apt.date);
-            return aptDate.toDateString() === date.toDateString();
+            // Konvertiere beide Daten in die lokale Zeitzone für den Vergleich
+            const aptDateLocal = new Date(aptDate.getTime() - aptDate.getTimezoneOffset() * 60000);
+            const compareDateLocal = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+            return aptDateLocal.toDateString() === compareDateLocal.toDateString();
         });
 
         dayAppointments.forEach(appointment => {
             const appointmentElement = createAppointmentElement(appointment);
             dayContainer.appendChild(appointmentElement);
         });
-    });
+
+        container.appendChild(dayContainer);
+    }
 }
 
 // Erstellt ein Termin-Element
@@ -185,8 +289,11 @@ function createAppointmentElement(appointment) {
     const element = document.createElement('div');
     element.className = `appointment ${appointment.status}`;
     
-    // The date is already in German timezone from the backend
-    const time = new Date(appointment.date).toLocaleTimeString('de-DE', {
+    // Konvertiere das Datum in die lokale Zeitzone
+    const aptDate = new Date(appointment.date);
+    const localDate = new Date(aptDate.getTime() - aptDate.getTimezoneOffset() * 60000);
+    
+    const time = localDate.toLocaleTimeString('de-DE', {
         hour: '2-digit',
         minute: '2-digit'
     });
@@ -233,20 +340,10 @@ function getStatusText(status) {
 
 async function handleAppointmentResponse(appointmentId, newStatus) {
     try {
-        const session = JSON.parse(localStorage.getItem('session'));
-        if (!session || !session.token) {
-            throw new Error('Keine gültige Session gefunden');
-        }
-
-        const response = await fetch(`${API_BASE_URL}/appointments/${appointmentId}/${newStatus}`, {
-            method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${session.token}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            mode: 'cors'
-        });
+        const response = await fetchWithAuth(
+            `${API_BASE_URL}/appointments/${appointmentId}/${newStatus}`,
+            { method: 'PUT' }
+        );
 
         if (!response.ok) {
             throw new Error('Failed to update appointment status');

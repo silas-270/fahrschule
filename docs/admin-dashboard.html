@@ -188,41 +188,45 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 0 2rem;
             width: 100%;
+            padding: 0 18px;
         }
 
         h1 {
-            font-size: 1.8rem;
-            font-weight: 500;
+            font-size: 2.2rem;
+            font-weight: 700;
             margin: 0;
             line-height: 1;
         }
 
         .logout-btn {
-            background: #424242;
+            background: none;
             color: #F3F3F3;
             border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 4px;
+            padding: 0.5rem 1.2rem 0.5rem 1.2rem;
+            border-radius: 8px;
             cursor: pointer;
-            transition: background 0.2s;
             font-size: 1.1rem;
             margin: 0;
             line-height: 1;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: background 0.2s, color 0.2s;
         }
-
+        .logout-btn .material-icons {
+            font-size: 1.3rem;
+        }
         .logout-btn:hover {
-            background: #484848;
+            background: #363636;
+            color: #BDBDBD;
         }
 
         /* Calendar Styles */
         .calendar {
             margin-top: 0; /* Entferne den alten margin-top */
             background: #303030;
-            border-radius: 8px;
+            border-radius: 16px;
             padding: 1rem;
         }
 
@@ -235,21 +239,29 @@
 
         .calendar-nav {
             display: flex;
-            gap: 1rem;
+            gap: 0.5rem;
             align-items: center;
         }
 
         .calendar-nav button {
-            background: #424242;
+            background: none;
             border: none;
-            color: #F3F3F3;
-            padding: 0.5rem;
-            border-radius: 4px;
+            color: #BDBDBD;
+            padding: 0.2rem 0.4rem;
+            border-radius: 50%;
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            transition: color 0.2s, background 0.2s;
         }
-
+        .calendar-nav button .material-icons {
+            font-size: 1.5rem;
+        }
         .calendar-nav button:hover {
-            background: #484848;
+            background: none;
+            color: #888;
         }
 
         .calendar-grid {
@@ -261,7 +273,7 @@
         .calendar-day {
             background: #424242;
             padding: 1rem;
-            border-radius: 4px;
+            border-radius: 8px;
             min-height: 100px;
         }
 
@@ -276,7 +288,7 @@
             color: white;
             padding: 0.5rem;
             margin-bottom: 0.5rem;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
             position: relative;
             transition: all 0.2s ease;
@@ -314,7 +326,7 @@
             border: none;
             color: white;
             padding: 0.25rem;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
             display: none;
         }
@@ -361,7 +373,7 @@
 
         .dialog {
             background: #303030;
-            border-radius: 8px;
+            border-radius: 16px;
             padding: 1.5rem;
             width: 90%;
             max-width: 500px;
@@ -491,7 +503,7 @@
         .dialog-button {
             padding: 0.5rem 1rem;
             border: none;
-            border-radius: 4px;
+            border-radius: 8px;
             cursor: pointer;
             font-weight: 500;
         }
@@ -516,7 +528,7 @@
     <header>
         <div class="header-content">
             <h1>Fahrlehrer Dashboard</h1>
-            <button class="logout-btn" onclick="logout()">Abmelden</button>
+            <button class="logout-btn" onclick="logout()">Logout <span class="material-icons">logout</span></button>
         </div>
     </header>
 
@@ -538,11 +550,11 @@
             <div class="calendar">
                 <div class="calendar-header">
                     <div class="calendar-nav">
-                        <button onclick="previousWeek()">
+                        <button onclick="previousWeek()" title="Vorherige Woche">
                             <span class="material-icons">chevron_left</span>
                         </button>
                         <h2 id="currentWeek">Woche vom 13.05.2024</h2>
-                        <button onclick="nextWeek()">
+                        <button onclick="nextWeek()" title="Nächste Woche">
                             <span class="material-icons">chevron_right</span>
                         </button>
                     </div>
@@ -813,11 +825,12 @@
             document.getElementById('currentWeek').textContent = `Woche vom ${weekStart} bis ${weekEnd}`;
             
             const calendarGrid = document.getElementById('calendarGrid');
-            calendarGrid.innerHTML = '';
             
+            // Load appointments first
             const appointments = await loadAppointments();
             
-            weekDates.forEach(date => {
+            // Create new day containers
+            const dayContainers = weekDates.map(date => {
                 const dayElement = document.createElement('div');
                 dayElement.className = 'calendar-day';
                 const dayName = date.toLocaleDateString('de-DE', { weekday: 'long' });
@@ -825,20 +838,24 @@
                     <div class="calendar-day-header">${dayName}</div>
                     <div class="calendar-day-content"></div>
                 `;
+                return dayElement;
+            });
+
+            // Update each day's content before replacing the old content
+            dayContainers.forEach((dayContainer, index) => {
+                const date = weekDates[index];
+                const dayContent = dayContainer.querySelector('.calendar-day-content');
                 
-                // Filtere Termine für diesen Tag
+                // Filter appointments for this day
                 const dayAppointments = appointments.filter(apt => {
                     const aptDate = new Date(apt.date);
                     return aptDate.toDateString() === date.toDateString();
                 });
 
-                // Sortiere Termine nach Uhrzeit
-                dayAppointments.sort((a, b) => 
-                    new Date(a.date) - new Date(b.date)
-                );
+                // Sort appointments by time
+                dayAppointments.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-                // Füge Termine zum Tag hinzu
-                const dayContent = dayElement.querySelector('.calendar-day-content');
+                // Add appointments to the day
                 dayAppointments.forEach(apt => {
                     const startTime = new Date(apt.date);
                     
@@ -854,9 +871,11 @@
                     `;
                     dayContent.appendChild(appointmentElement);
                 });
-
-                calendarGrid.appendChild(dayElement);
             });
+
+            // Only replace the old content when everything is ready
+            calendarGrid.innerHTML = '';
+            dayContainers.forEach(container => calendarGrid.appendChild(container));
         }
 
         // Dialog-Funktionen

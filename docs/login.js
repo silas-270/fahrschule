@@ -16,8 +16,15 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
         const data = await response.json();
         
         if (response.ok) {
-            // Speichere den Token im localStorage
-            localStorage.setItem('authToken', data.token);
+            // Speichere Session-Daten mit Login-Zeitpunkt
+            const sessionData = {
+                accessToken: data.accessToken,
+                refreshToken: data.refreshToken,
+                username: data.user.username,
+                role: data.user.role,
+                lastActivity: Date.now()
+            };
+            localStorage.setItem('session', JSON.stringify(sessionData));
             // Weiterleitung zum Dashboard
             window.location.href = 'dashboard.html';
         } else {
