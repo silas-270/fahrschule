@@ -826,15 +826,10 @@
                     <div class="calendar-day-content"></div>
                 `;
                 
-                // Setze die Uhrzeit auf 00:00:00 für den Vergleich
-                const compareDate = new Date(date);
-                compareDate.setHours(0, 0, 0, 0);
-                
                 // Filtere Termine für diesen Tag
                 const dayAppointments = appointments.filter(apt => {
                     const aptDate = new Date(apt.date);
-                    aptDate.setHours(0, 0, 0, 0);
-                    return aptDate.getTime() === compareDate.getTime();
+                    return aptDate.toDateString() === date.toDateString();
                 });
 
                 // Sortiere Termine nach Uhrzeit
@@ -987,9 +982,9 @@
                 return;
             }
 
-            // Erstelle ISO-Datetime-String in UTC
+            // Erstelle ISO-Datetime-String
             const dateTime = new Date(date);
-            dateTime.setHours(hourNum, minuteNum, 0, 0);
+            dateTime.setHours(hourNum, minuteNum);
             
             // Kombiniere Titel und Dauer
             const fullTitle = duration ? `${title} - ${duration}` : title;

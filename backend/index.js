@@ -476,18 +476,39 @@ app.get('/appointments', async (req, res) => {
         }
 
         const decoded = jwt.verify(token, JWT_SECRET);
-        const { startDate, endDate } = req.query;
+        const { start_date, end_date } = req.query;
 
-        if (!startDate || !endDate) {
-            return res.status(400).json({ message: 'Start- und Enddatum erforderlich' });
+        if (!start_date || !end_date) {
+            return res.status(400).json({ 
+                success: false,
+                message: 'Start- und Enddatum erforderlich' 
+            });
         }
 
         const db = await openDb();
-        const appointments = await db.getAppointments(decoded.id, startDate, endDate);
-        res.json(appointments);
+        const query = `
+            SELECT 
+                a.*,
+                u.username as student_name
+            FROM appointments a
+            JOIN users u ON a.student_id = u.id
+            WHERE a.student_id = $1
+            AND a.date >= $2::timestamp
+            AND a.date <= $3::timestamp
+            ORDER BY a.date ASC
+        `;
+        
+        const appointments = await db.all(query, [decoded.id, start_date, end_date]);
+        res.json({
+            success: true,
+            appointments: appointments
+        });
     } catch (error) {
         console.error('Fehler beim Abrufen der Termine:', error);
-        res.status(500).json({ message: 'Interner Serverfehler' });
+        res.status(500).json({
+            success: false,
+            message: 'Ein Fehler ist aufgetreten'
+        });
     }
 });
 

@@ -57,7 +57,12 @@ async function fetchAppointments(startDate, endDate) {
             throw new Error('Keine gültige Session gefunden');
         }
 
-        const url = `${API_BASE_URL}/appointments?startDate=${formatDate(startDate)}&endDate=${formatDate(endDate)}`;
+        const params = new URLSearchParams({
+            start_date: startDate.toISOString(),
+            end_date: endDate.toISOString()
+        });
+
+        const url = `${API_BASE_URL}/appointments?${params.toString()}`;
         console.log('Fetching appointments from:', url); // Debug output
 
         const headers = {
@@ -82,9 +87,9 @@ async function fetchAppointments(startDate, endDate) {
             throw new Error(`Failed to fetch appointments: ${response.status} ${errorText}`);
         }
 
-        const appointments = await response.json();
-        console.log('Fetched appointments:', appointments); // Debug output
-        return appointments;
+        const data = await response.json();
+        console.log('Fetched appointments:', data); // Debug output
+        return data.appointments;
     } catch (error) {
         console.error('Error fetching appointments:', error);
         showNotification('Fehler beim Laden der Termine', 'error');
@@ -111,17 +116,16 @@ function initializeCalendar() {
     const appointmentsContainer = document.getElementById('appointments');
     appointmentsContainer.innerHTML = ''; // Clear existing content
 
-    // Berechne das Startdatum der aktuellen Woche (Montag)
+    // Berechne das Startdatum der aktuellen Woche
     const today = new Date();
     const startDate = new Date(today);
-    
     // Setze auf Montag der aktuellen Woche
     const dayOfWeek = today.getDay();
     const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Wenn Sonntag, dann -6 Tage, sonst 1 - dayOfWeek
     startDate.setDate(today.getDate() + diff + (currentWeekOffset * 7));
     
     const endDate = new Date(startDate);
-    endDate.setDate(startDate.getDate() + 6); // +6 Tage für Sonntag
+    endDate.setDate(startDate.getDate() + 6);
     
     updateWeekTitle(startDate, endDate);
 
@@ -142,11 +146,13 @@ function initializeCalendar() {
         appointmentsContainer.appendChild(dayContainer);
     }
 
-    // Lade die Termine für die Woche
+    // Nur Abfragen, wenn sich die Woche geändert hat
     const weekKey = `${startDate.toISOString()}-${endDate.toISOString()}`;
     if (currentWeekData?.weekKey === weekKey) {
+        // Verwende die bereits geladenen Daten
         displayWeekAppointments(appointmentsContainer, startDate, currentWeekData.appointments);
     } else {
+        // Lade neue Daten
         fetchAppointments(startDate, endDate).then(appointments => {
             currentWeekData = {
                 weekKey,
@@ -162,12 +168,9 @@ function displayWeekAppointments(container, startDate, appointments) {
         const date = new Date(startDate);
         date.setDate(startDate.getDate() + index);
         
-        // Filtere Termine für diesen Tag
         const dayAppointments = appointments.filter(apt => {
             const aptDate = new Date(apt.date);
-            return aptDate.getDate() === date.getDate() && 
-                   aptDate.getMonth() === date.getMonth() && 
-                   aptDate.getFullYear() === date.getFullYear();
+            return aptDate.toDateString() === date.toDateString();
         });
 
         dayAppointments.forEach(appointment => {
@@ -182,12 +185,10 @@ function createAppointmentElement(appointment) {
     const element = document.createElement('div');
     element.className = `appointment ${appointment.status}`;
     
-    // Konvertiere das Datum in die lokale Zeitzone
-    const appointmentDate = new Date(appointment.date);
-    const time = appointmentDate.toLocaleTimeString('de-DE', {
+    // The date is already in German timezone from the backend
+    const time = new Date(appointment.date).toLocaleTimeString('de-DE', {
         hour: '2-digit',
-        minute: '2-digit',
-        timeZone: 'Europe/Berlin'
+        minute: '2-digit'
     });
     
     const timeAndType = document.createElement('div');
