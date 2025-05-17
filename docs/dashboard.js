@@ -1,76 +1,7 @@
 // Globale Variablen
 let currentWeekOffset = 0;
-const API_BASE_URL = window.API_BASE_URL || 'https://fahrschule-backend.up.railway.app';
+const API_BASE_URL = 'https://fahrschule-production.up.railway.app';
 const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 Minuten in Millisekunden
-
-// Funktion zum Aktualisieren des Access Tokens
-async function refreshAccessToken() {
-    try {
-        const session = JSON.parse(localStorage.getItem('session'));
-        if (!session || !session.refreshToken) {
-            throw new Error('Kein Refresh Token verfügbar');
-        }
-
-        const response = await fetch(`${API_BASE_URL}/refresh-token`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ refreshToken: session.refreshToken })
-        });
-
-        if (!response.ok) {
-            throw new Error('Token-Refresh fehlgeschlagen');
-        }
-
-        const data = await response.json();
-        session.accessToken = data.accessToken;
-        session.refreshToken = data.refreshToken;
-        session.lastActivity = Date.now();
-        localStorage.setItem('session', JSON.stringify(session));
-        return true;
-    } catch (error) {
-        console.error('Token-Refresh-Fehler:', error);
-        logout();
-        return false;
-    }
-}
-
-// Funktion zum Ausführen von API-Aufrufen mit Token-Refresh
-async function fetchWithAuth(url, options = {}) {
-    const session = JSON.parse(localStorage.getItem('session'));
-    if (!session || !session.accessToken) {
-        throw new Error('Keine gültige Session gefunden');
-    }
-
-    // Füge Authorization Header hinzu
-    options.headers = {
-        ...options.headers,
-        'Authorization': `Bearer ${session.accessToken}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-    };
-
-    try {
-        const response = await fetch(url, options);
-        
-        // Wenn der Token abgelaufen ist, versuche ihn zu aktualisieren
-        if (response.status === 401) {
-            const refreshSuccess = await refreshAccessToken();
-            if (refreshSuccess) {
-                // Wiederhole den ursprünglichen Request mit dem neuen Token
-                const newSession = JSON.parse(localStorage.getItem('session'));
-                options.headers['Authorization'] = `Bearer ${newSession.accessToken}`;
-                return fetch(url, options);
-            }
-        }
-        
-        return response;
-    } catch (error) {
-        console.error('API-Aufruf fehlgeschlagen:', error);
-        throw error;
-    }
-}
 
 // Funktion zum Überprüfen der Session
 function checkSession() {
@@ -171,6 +102,11 @@ function formatDateForDisplay(date) {
 // Funktion zum Abrufen der Termine vom Backend
 async function fetchAppointments(startDate, endDate) {
     try {
+        const session = JSON.parse(localStorage.getItem('session'));
+        if (!session || !session.token) {
+            throw new Error('Keine gültige Session gefunden');
+        }
+
         // Setze die Endzeit auf 23:59:59 des Enddatums
         const endDateTime = new Date(endDate);
         endDateTime.setHours(23, 59, 59, 999);
@@ -182,8 +118,16 @@ async function fetchAppointments(startDate, endDate) {
 
         console.log('Fetching appointments from:', url.toString());
 
-        const response = await fetchWithAuth(url.toString());
-        
+        const response = await fetch(url.toString(), {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${session.token}`,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            mode: 'cors'
+        });
+
         if (!response.ok) {
             const errorText = await response.text();
             console.error('Error response:', errorText);
@@ -340,10 +284,20 @@ function getStatusText(status) {
 
 async function handleAppointmentResponse(appointmentId, newStatus) {
     try {
-        const response = await fetchWithAuth(
-            `${API_BASE_URL}/appointments/${appointmentId}/${newStatus}`,
-            { method: 'PUT' }
-        );
+        const session = JSON.parse(localStorage.getItem('session'));
+        if (!session || !session.token) {
+            throw new Error('Keine gültige Session gefunden');
+        }
+
+        const response = await fetch(`${API_BASE_URL}/appointments/${appointmentId}/${newStatus}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${session.token}`,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            mode: 'cors'
+        });
 
         if (!response.ok) {
             throw new Error('Failed to update appointment status');

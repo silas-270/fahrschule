@@ -4,10 +4,8 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
     
-    const API_URL = window.API_BASE_URL || 'https://fahrschule-backend.up.railway.app';
-    
     try {
-        const response = await fetch(`${API_URL}/login`, {
+        const response = await fetch('https://fahrschule-backend.up.railway.app/login', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -20,10 +18,8 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
         if (response.ok) {
             // Speichere Session-Daten mit Login-Zeitpunkt
             const sessionData = {
-                accessToken: data.accessToken,
-                refreshToken: data.refreshToken,
-                username: data.user.username,
-                role: data.user.role,
+                token: data.token,
+                username: username,
                 lastActivity: Date.now()
             };
             localStorage.setItem('session', JSON.stringify(sessionData));

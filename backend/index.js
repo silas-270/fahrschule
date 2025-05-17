@@ -72,31 +72,10 @@ app.use((req, res, next) => {
 
 // Security Headers Middleware
 app.use((req, res, next) => {
-    // Erzwinge HTTPS
-    if (process.env.NODE_ENV === 'production' && !req.secure) {
-        return res.redirect(`https://${req.headers.host}${req.url}`);
-    }
-
-    // Content Security Policy
-    res.setHeader(
-        'Content-Security-Policy',
-        "default-src 'self'; " +
-        "script-src 'self' 'unsafe-inline'; " +
-        "style-src 'self' 'unsafe-inline'; " +
-        "img-src 'self' data:; " +
-        "font-src 'self'; " +
-        "connect-src 'self' https://fahrschule-backend.up.railway.app; " +
-        "frame-ancestors 'none';"
-    );
-
-    // Bestehende Security Headers
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('X-XSS-Protection', '1; mode=block');
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-    res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
-    
     next();
 });
 
@@ -133,11 +112,8 @@ const adminAuth = (req, res, next) => {
     next();
 };
 
-// JWT Konfiguration
+// JWT Secret
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'your-refresh-secret-key';
-const ACCESS_TOKEN_EXPIRY = '15m';  // 15 Minuten
-const REFRESH_TOKEN_EXPIRY = '7d';  // 7 Tage
 
 // Token Validierung Middleware
 const validateToken = (req, res, next) => {
@@ -204,23 +180,6 @@ const validatePassword = (password) => {
     return true;
 };
 
-// Token Generierung
-function generateTokens(user) {
-    const accessToken = jwt.sign(
-        { id: user.id, username: user.username, role: user.role },
-        JWT_SECRET,
-        { expiresIn: ACCESS_TOKEN_EXPIRY }
-    );
-    
-    const refreshToken = jwt.sign(
-        { id: user.id },
-        JWT_REFRESH_SECRET,
-        { expiresIn: REFRESH_TOKEN_EXPIRY }
-    );
-    
-    return { accessToken, refreshToken };
-}
-
 // Registrierungs-Route
 app.post('/register', async (req, res) => {
     try {
@@ -272,6 +231,7 @@ app.post('/login', async (req, res) => {
     try {
         const { username, password } = req.body;
         
+        // Benutzer in der Datenbank suchen
         const db = await openDb();
         const user = await db.get('SELECT * FROM users WHERE username = $1', [username]);
         
@@ -279,8 +239,10 @@ app.post('/login', async (req, res) => {
             return res.status(401).json({ message: 'Ungültige Anmeldedaten' });
         }
 
+        // Passwort überprüfen
         const validPassword = await bcrypt.compare(password, user.password);
         if (!validPassword) {
+            // Fehlgeschlagene Anmeldeversuche aktualisieren
             await db.run(
                 'UPDATE users SET failed_attempts = failed_attempts + 1 WHERE id = $1',
                 [user.id]
@@ -288,57 +250,42 @@ app.post('/login', async (req, res) => {
             return res.status(401).json({ message: 'Ungültige Anmeldedaten' });
         }
 
-        // Reset failed attempts on successful login
+        // Fehlgeschlagene Anmeldeversuche zurücksetzen
         await db.run(
             'UPDATE users SET failed_attempts = 0, last_login = CURRENT_TIMESTAMP WHERE id = $1',
             [user.id]
         );
 
-        const tokens = generateTokens(user);
-        
-        res.json({
-            success: true,
-            accessToken: tokens.accessToken,
-            refreshToken: tokens.refreshToken,
+        // JWT Token generieren
+        const token = jwt.sign(
+            { 
+                id: user.id, 
+                username: user.username,
+                role: user.role 
+            },
+            JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+
+        // Wenn der Benutzer ein Admin ist, füge den Admin-Token hinzu
+        const responseData = {
+            message: 'Login erfolgreich',
+            token,
             user: {
                 id: user.id,
                 username: user.username,
                 role: user.role
             }
-        });
+        };
+
+        if (user.role === 'admin') {
+            responseData.adminToken = ADMIN_TOKEN;
+        }
+
+        res.json(responseData);
     } catch (error) {
         console.error('Login error:', error);
-        res.status(500).json({ message: 'Ein Fehler ist aufgetreten' });
-    }
-});
-
-// Refresh Token Route
-app.post('/refresh-token', async (req, res) => {
-    try {
-        const { refreshToken } = req.body;
-        
-        if (!refreshToken) {
-            return res.status(401).json({ message: 'Refresh Token fehlt' });
-        }
-
-        const decoded = jwt.verify(refreshToken, JWT_REFRESH_SECRET);
-        const db = await openDb();
-        const user = await db.get('SELECT * FROM users WHERE id = $1', [decoded.id]);
-
-        if (!user) {
-            return res.status(401).json({ message: 'Ungültiger Refresh Token' });
-        }
-
-        const tokens = generateTokens(user);
-        
-        res.json({
-            success: true,
-            accessToken: tokens.accessToken,
-            refreshToken: tokens.refreshToken
-        });
-    } catch (error) {
-        console.error('Refresh token error:', error);
-        res.status(401).json({ message: 'Ungültiger Refresh Token' });
+        res.status(500).json({ message: 'Interner Serverfehler' });
     }
 });
 
