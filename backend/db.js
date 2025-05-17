@@ -168,7 +168,11 @@ export async function openDb() {
                     ORDER BY a.date ASC
                 `;
                 
-                const result = await client.query(query, [studentId, startDate, endDate]);
+                // Konvertiere die Datumsangaben in UTC
+                const utcStartDate = new Date(startDate).toISOString();
+                const utcEndDate = new Date(endDate).toISOString();
+                
+                const result = await client.query(query, [studentId, utcStartDate, utcEndDate]);
                 return result.rows;
             } catch (error) {
                 console.error('Fehler beim Abrufen der Termine:', error);

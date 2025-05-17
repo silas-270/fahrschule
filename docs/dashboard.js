@@ -111,7 +111,7 @@ function initializeCalendar() {
     const appointmentsContainer = document.getElementById('appointments');
     appointmentsContainer.innerHTML = ''; // Clear existing content
 
-    // Berechne das Startdatum der aktuellen Woche
+    // Berechne das Startdatum der aktuellen Woche (Montag)
     const today = new Date();
     const startDate = new Date(today);
     
@@ -120,12 +120,8 @@ function initializeCalendar() {
     const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Wenn Sonntag, dann -6 Tage, sonst 1 - dayOfWeek
     startDate.setDate(today.getDate() + diff + (currentWeekOffset * 7));
     
-    // Setze die Uhrzeit auf 00:00:00
-    startDate.setHours(0, 0, 0, 0);
-    
     const endDate = new Date(startDate);
-    endDate.setDate(startDate.getDate() + 6);
-    endDate.setHours(23, 59, 59, 999);
+    endDate.setDate(startDate.getDate() + 6); // +6 Tage für Sonntag
     
     updateWeekTitle(startDate, endDate);
 
@@ -146,13 +142,11 @@ function initializeCalendar() {
         appointmentsContainer.appendChild(dayContainer);
     }
 
-    // Nur Abfragen, wenn sich die Woche geändert hat
+    // Lade die Termine für die Woche
     const weekKey = `${startDate.toISOString()}-${endDate.toISOString()}`;
     if (currentWeekData?.weekKey === weekKey) {
-        // Verwende die bereits geladenen Daten
         displayWeekAppointments(appointmentsContainer, startDate, currentWeekData.appointments);
     } else {
-        // Lade neue Daten
         fetchAppointments(startDate, endDate).then(appointments => {
             currentWeekData = {
                 weekKey,
@@ -168,14 +162,12 @@ function displayWeekAppointments(container, startDate, appointments) {
         const date = new Date(startDate);
         date.setDate(startDate.getDate() + index);
         
-        // Setze die Uhrzeit auf 00:00:00 für den Vergleich
-        const compareDate = new Date(date);
-        compareDate.setHours(0, 0, 0, 0);
-        
+        // Filtere Termine für diesen Tag
         const dayAppointments = appointments.filter(apt => {
             const aptDate = new Date(apt.date);
-            aptDate.setHours(0, 0, 0, 0);
-            return aptDate.getTime() === compareDate.getTime();
+            return aptDate.getDate() === date.getDate() && 
+                   aptDate.getMonth() === date.getMonth() && 
+                   aptDate.getFullYear() === date.getFullYear();
         });
 
         dayAppointments.forEach(appointment => {
@@ -190,10 +182,12 @@ function createAppointmentElement(appointment) {
     const element = document.createElement('div');
     element.className = `appointment ${appointment.status}`;
     
-    // The date is already in German timezone from the backend
-    const time = new Date(appointment.date).toLocaleTimeString('de-DE', {
+    // Konvertiere das Datum in die lokale Zeitzone
+    const appointmentDate = new Date(appointment.date);
+    const time = appointmentDate.toLocaleTimeString('de-DE', {
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
+        timeZone: 'Europe/Berlin'
     });
     
     const timeAndType = document.createElement('div');
