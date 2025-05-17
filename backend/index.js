@@ -62,12 +62,13 @@ app.use((err, req, res, next) => {
 
 // CSRF Token Middleware
 app.use((req, res, next) => {
-    if (req.method === 'GET') {
+    // Setze CSRF-Token für alle Anfragen, die keine POST/PUT/DELETE sind
+    if (!['POST', 'PUT', 'DELETE'].includes(req.method)) {
         const csrfToken = generateCSRFToken();
         res.cookie('csrf_token', csrfToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict'
+            sameSite: 'lax'  // Ändern von 'strict' zu 'lax' für bessere Kompatibilität
         });
     }
     next();
