@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fahrlehrer Dashboard - Fahrspur 24</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -20,15 +21,124 @@
         }
 
         .container {
-            max-width: 1200px;
-            margin: 0 auto;
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: 32px; /* Reduzierte Breite */
+            background: #303030;
+            border-right: 1px solid #424242;
+            transition: width 0.3s ease;
+            overflow: hidden;
+            position: fixed;
+            top: 64px;
+            bottom: 0;
+            left: 0;
+        }
+
+        .sidebar.expanded {
+            width: 300px;
+        }
+
+        .sidebar-toggle {
+            padding: 0.5rem;
+            background: none;
+            border: none;
+            color: #F3F3F3;
+            cursor: pointer;
+            width: 100%;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sidebar-toggle:hover {
+            background: #424242;
+        }
+
+        /* Verstecke horizontale Scrollbar */
+        .user-list {
+            height: calc(100vh - 114px);
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        .user-item {
+            padding: 0.25rem 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #424242;
+            min-height: 32px;
+        }
+
+        .user-item:hover {
+            background: #424242;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.9rem;
+        }
+
+        .user-info .material-icons {
+            font-size: 1.1rem;
+        }
+
+        .user-actions {
+            display: flex;
+            gap: 0.25rem;
+            margin-left: auto;
+        }
+
+        .action-button {
+            background: none;
+            border: none;
+            color: #F3F3F3;
+            cursor: pointer;
+            padding: 0.15rem;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .action-button .material-icons {
+            font-size: 1.1rem;
+        }
+
+        .action-button:hover {
+            background: #505050;
+        }
+
+        /* Main Content Styles */
+        .main-content {
+            flex: 1;
             padding: 2rem;
+            overflow-y: auto;
+            margin-left: 40px; /* Sidebar width when collapsed */
+            transition: margin-left 0.3s ease;
+        }
+
+        .main-content.expanded {
+            margin-left: 300px; /* Sidebar width when expanded */
         }
 
         header {
             background: #303030;
             padding: 1rem 2rem;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            height: 64px;
         }
 
         .header-content {
@@ -58,12 +168,200 @@
             background: #484848;
         }
 
-        .welcome-message {
-            margin: 2rem 0;
-            padding: 1rem;
+        /* Calendar Styles */
+        .calendar {
+            margin-top: 80px;
             background: #303030;
             border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .calendar-nav {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .calendar-nav button {
+            background: #424242;
+            border: none;
+            color: #F3F3F3;
+            padding: 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .calendar-nav button:hover {
+            background: #484848;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 1rem;
+        }
+
+        .calendar-day {
+            background: #424242;
+            padding: 1rem;
+            border-radius: 4px;
+            min-height: 100px;
+        }
+
+        .calendar-day-header {
             text-align: center;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        .appointment {
+            background: #4CAF50;
+            color: white;
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .appointment:hover {
+            transform: scale(1.02);
+        }
+
+        .appointment.pending {
+            background: #FFC107;
+        }
+
+        .appointment.cancelled {
+            background: #F44336;
+        }
+
+        .appointment-title {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+
+        .appointment-user {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .appointment-delete {
+            position: absolute;
+            top: 0.25rem;
+            right: 0.25rem;
+            background: rgba(0, 0, 0, 0.2);
+            border: none;
+            color: white;
+            padding: 0.25rem;
+            border-radius: 4px;
+            cursor: pointer;
+            display: none;
+        }
+
+        .appointment:hover .appointment-delete {
+            display: block;
+        }
+
+        .appointment-delete:hover {
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        /* Scrollbar Styles */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #303030;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #424242;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #505050;
+        }
+
+        /* Dialog Styles */
+        .dialog-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .dialog {
+            background: #303030;
+            border-radius: 8px;
+            padding: 1.5rem;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .dialog-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .dialog-title {
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+
+        .dialog-close {
+            background: none;
+            border: none;
+            color: #F3F3F3;
+            cursor: pointer;
+            padding: 0.25rem;
+        }
+
+        .dialog-content {
+            margin-bottom: 1rem;
+        }
+
+        .dialog-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+
+        .dialog-button {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .dialog-button.primary {
+            background: #2196F3;
+            color: white;
+        }
+
+        .dialog-button.secondary {
+            background: #424242;
+            color: #F3F3F3;
         }
     </style>
 </head>
@@ -76,15 +374,70 @@
     </header>
 
     <div class="container">
-        <div class="welcome-message">
-            <h2>Willkommen im Fahrlehrer-Bereich</h2>
-            <p>Hier können Sie Ihre Fahrschüler und Termine verwalten.</p>
-        </div>
-        
-        <div style="margin-top: 2rem; text-align: center;">
-            <button onclick="createTestAppointment()" style="background: #424242; color: #F3F3F3; border: none; padding: 1rem 2rem; border-radius: 8px; cursor: pointer;">
-                Test: Termin erstellen
+        <div class="sidebar" id="sidebar">
+            <button class="sidebar-toggle" onclick="toggleSidebar()">
+                <span class="material-icons">chevron_right</span>
             </button>
+            <div class="user-list" id="userList">
+                <!-- Benutzer werden hier dynamisch eingefügt -->
+            </div>
+        </div>
+
+        <div class="main-content" id="mainContent">
+            <div class="calendar">
+                <div class="calendar-header">
+                    <div class="calendar-nav">
+                        <button onclick="previousWeek()">
+                            <span class="material-icons">chevron_left</span>
+                        </button>
+                        <h2 id="currentWeek">Woche vom 13.05.2024</h2>
+                        <button onclick="nextWeek()">
+                            <span class="material-icons">chevron_right</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="calendar-grid" id="calendarGrid">
+                    <!-- Kalendertage werden hier dynamisch eingefügt -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dialog für Benutzereinstellungen -->
+    <div class="dialog-overlay" id="userSettingsDialog">
+        <div class="dialog">
+            <div class="dialog-header">
+                <h3 class="dialog-title" id="userSettingsTitle">Benutzer bearbeiten</h3>
+                <button class="dialog-close" onclick="closeDialog('userSettingsDialog')">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <div class="dialog-content">
+                <!-- Hier kommen später die Einstellungsfelder -->
+            </div>
+            <div class="dialog-actions">
+                <button class="dialog-button secondary" onclick="closeDialog('userSettingsDialog')">Abbrechen</button>
+                <button class="dialog-button primary" onclick="saveUserSettings()">Speichern</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dialog für Terminerstellung -->
+    <div class="dialog-overlay" id="createAppointmentDialog">
+        <div class="dialog">
+            <div class="dialog-header">
+                <h3 class="dialog-title" id="createAppointmentTitle">Termin erstellen</h3>
+                <button class="dialog-close" onclick="closeDialog('createAppointmentDialog')">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <div class="dialog-content">
+                <!-- Hier kommen später die Termin-Felder -->
+            </div>
+            <div class="dialog-actions">
+                <button class="dialog-button secondary" onclick="closeDialog('createAppointmentDialog')">Abbrechen</button>
+                <button class="dialog-button primary" onclick="saveAppointment()">Erstellen</button>
+            </div>
         </div>
     </div>
 
@@ -121,28 +474,241 @@
             return await response.json();
         }
 
-        // Test-Funktion zum Erstellen eines Termins
-        async function createTestAppointment() {
-            try {
-                const appointment = await adminRequest('/appointments', 'POST', {
-                    student_id: 1,
-                    date: '2025-05-17T18:00:00',
-                    type: 'Fahrstunde'
-                });
-                alert('Termin erfolgreich erstellt!');
-                console.log('Erstellter Termin:', appointment);
-            } catch (error) {
-                alert('Fehler beim Erstellen des Termins: ' + error.message);
-                console.error('Fehler:', error);
+        // Sidebar Toggle
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            const toggleButton = sidebar.querySelector('.sidebar-toggle .material-icons');
+            
+            sidebar.classList.toggle('expanded');
+            mainContent.classList.toggle('expanded');
+            
+            // Toggle icon direction
+            if (sidebar.classList.contains('expanded')) {
+                toggleButton.textContent = 'chevron_left';
+            } else {
+                toggleButton.textContent = 'chevron_right';
             }
         }
 
-        // Prüfe ob der Benutzer eingeloggt ist und ein Admin ist
+        // Benutzer laden und anzeigen
+        async function loadUsers() {
+            try {
+                const users = await adminRequest('/admin/users');
+                const userList = document.getElementById('userList');
+                userList.innerHTML = '';
+
+                // Speichere die Benutzer global für die Dialog-Funktionen
+                window.users = users.users;
+
+                users.users.forEach(user => {
+                    const userElement = document.createElement('div');
+                    userElement.className = 'user-item';
+                    userElement.innerHTML = `
+                        <div class="user-info">
+                            <span class="material-icons">person</span>
+                            <span>${user.username}</span>
+                        </div>
+                        <div class="user-actions">
+                            <button class="action-button" onclick="createAppointment(${user.id})">
+                                <span class="material-icons">add</span>
+                            </button>
+                            <button class="action-button" onclick="openUserSettings(${user.id})">
+                                <span class="material-icons">settings</span>
+                            </button>
+                        </div>
+                    `;
+                    userList.appendChild(userElement);
+                });
+            } catch (error) {
+                console.error('Fehler beim Laden der Benutzer:', error);
+            }
+        }
+
+        // Kalender-Navigation
+        let currentDate = new Date();
+
+        function formatDate(date) {
+            return date.toLocaleDateString('de-DE', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+        }
+
+        function formatTime(date) {
+            return date.toLocaleTimeString('de-DE', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function getWeekDates(date) {
+            const day = date.getDay();
+            const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+            const monday = new Date(date.setDate(diff));
+            const weekDates = [];
+            
+            for (let i = 0; i < 7; i++) {
+                const newDate = new Date(monday);
+                newDate.setDate(monday.getDate() + i);
+                weekDates.push(newDate);
+            }
+            
+            return weekDates;
+        }
+
+        async function loadAppointments() {
+            try {
+                const weekDates = getWeekDates(currentDate);
+                const startDate = weekDates[0];
+                const endDate = new Date(weekDates[6]);
+                endDate.setHours(23, 59, 59);
+
+                const response = await adminRequest('/admin/appointments', 'GET', null, {
+                    start_date: startDate.toISOString(),
+                    end_date: endDate.toISOString()
+                });
+
+                return response.appointments;
+            } catch (error) {
+                console.error('Fehler beim Laden der Termine:', error);
+                return [];
+            }
+        }
+
+        function getStatusClass(status) {
+            switch (status) {
+                case 'accepted':
+                    return '';
+                case 'suggested':
+                    return 'pending';
+                case 'rejected':
+                    return 'cancelled';
+                default:
+                    return '';
+            }
+        }
+
+        async function updateCalendar() {
+            const weekDates = getWeekDates(currentDate);
+            const weekStart = formatDate(weekDates[0]);
+            const weekEnd = formatDate(weekDates[6]);
+            document.getElementById('currentWeek').textContent = `Woche vom ${weekStart} bis ${weekEnd}`;
+            
+            const calendarGrid = document.getElementById('calendarGrid');
+            calendarGrid.innerHTML = '';
+            
+            const appointments = await loadAppointments();
+            
+            weekDates.forEach(date => {
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-day';
+                const dayName = date.toLocaleDateString('de-DE', { weekday: 'long' });
+                dayElement.innerHTML = `
+                    <div class="calendar-day-header">${dayName}</div>
+                    <div class="calendar-day-content"></div>
+                `;
+                
+                // Filtere Termine für diesen Tag
+                const dayAppointments = appointments.filter(apt => {
+                    const aptDate = new Date(apt.date);
+                    return aptDate.toDateString() === date.toDateString();
+                });
+
+                // Sortiere Termine nach Uhrzeit
+                dayAppointments.sort((a, b) => 
+                    new Date(a.date) - new Date(b.date)
+                );
+
+                // Füge Termine zum Tag hinzu
+                const dayContent = dayElement.querySelector('.calendar-day-content');
+                dayAppointments.forEach(apt => {
+                    const startTime = new Date(apt.date);
+                    const endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // 1 Stunde später
+                    
+                    const appointmentElement = document.createElement('div');
+                    appointmentElement.className = `appointment ${getStatusClass(apt.status)}`;
+                    appointmentElement.innerHTML = `
+                        <div class="appointment-title">${apt.type}</div>
+                        <div class="appointment-user">${apt.student_name}</div>
+                        <div class="appointment-time">${formatTime(startTime)} - ${formatTime(endTime)}</div>
+                        <button class="appointment-delete" onclick="deleteAppointment(${apt.id})">
+                            <span class="material-icons">delete</span>
+                        </button>
+                    `;
+                    dayContent.appendChild(appointmentElement);
+                });
+
+                calendarGrid.appendChild(dayElement);
+            });
+        }
+
+        async function deleteAppointment(appointmentId) {
+            if (confirm('Möchten Sie diesen Termin wirklich löschen?')) {
+                try {
+                    await adminRequest(`/admin/appointments/${appointmentId}`, 'DELETE');
+                    await updateCalendar();
+                } catch (error) {
+                    console.error('Fehler beim Löschen des Termins:', error);
+                    alert('Fehler beim Löschen des Termins');
+                }
+            }
+        }
+
+        function previousWeek() {
+            currentDate.setDate(currentDate.getDate() - 7);
+            updateCalendar();
+        }
+
+        function nextWeek() {
+            currentDate.setDate(currentDate.getDate() + 7);
+            updateCalendar();
+        }
+
+        // Dialog-Funktionen
+        function openUserSettings(userId) {
+            const dialog = document.getElementById('userSettingsDialog');
+            const title = document.getElementById('userSettingsTitle');
+            const user = window.users.find(u => u.id === userId);
+            if (user) {
+                title.textContent = `${user.username} bearbeiten`;
+                dialog.style.display = 'flex';
+            }
+        }
+
+        function createAppointment(userId) {
+            const dialog = document.getElementById('createAppointmentDialog');
+            const title = document.getElementById('createAppointmentTitle');
+            const user = window.users.find(u => u.id === userId);
+            if (user) {
+                title.textContent = `Termin für ${user.username} erstellen`;
+                dialog.style.display = 'flex';
+            }
+        }
+
+        function closeDialog(dialogId) {
+            document.getElementById(dialogId).style.display = 'none';
+        }
+
+        function saveUserSettings() {
+            // Implementierung folgt
+            closeDialog('userSettingsDialog');
+        }
+
+        function saveAppointment() {
+            // Implementierung folgt
+            closeDialog('createAppointmentDialog');
+        }
+
+        // Initialisierung
         window.addEventListener('load', () => {
             const session = JSON.parse(localStorage.getItem('session'));
             if (!session || session.role !== 'admin') {
                 window.location.href = 'index.html';
             }
+            loadUsers();
+            updateCalendar();
         });
 
         function logout() {

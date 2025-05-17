@@ -308,6 +308,43 @@ app.get('/admin/users', adminAuth, async (req, res) => {
     }
 });
 
+// Alle Termine für Admin abrufen
+app.get('/admin/appointments', adminAuth, async (req, res) => {
+    try {
+        const { start_date, end_date } = req.query;
+        if (!start_date || !end_date) {
+            return res.status(400).json({ 
+                success: false,
+                message: 'Start- und Enddatum erforderlich' 
+            });
+        }
+
+        const db = await openDb();
+        const query = `
+            SELECT 
+                a.*,
+                u.username as student_name
+            FROM appointments a
+            JOIN users u ON a.student_id = u.id
+            WHERE a.date >= $1::timestamp
+            AND a.date <= $2::timestamp
+            ORDER BY a.date ASC
+        `;
+        
+        const appointments = await db.all(query, [start_date, end_date]);
+        res.json({
+            success: true,
+            appointments: appointments
+        });
+    } catch (error) {
+        console.error('Fehler beim Abrufen der Termine:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Ein Fehler ist aufgetreten'
+        });
+    }
+});
+
 // Neuen Benutzer erstellen
 app.post('/admin/users', adminAuth, async (req, res) => {
     try {
