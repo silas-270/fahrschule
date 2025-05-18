@@ -5,38 +5,42 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     const password = document.getElementById('password').value;
     
     try {
-        // Hole CSRF-Token aus dem Cookie
-        const csrfToken = document.cookie
-            .split('; ')
-            .find(row => row.startsWith('csrf_token='))
-            ?.split('=')[1];
-
-        console.log('CSRF Token found:', csrfToken ? 'Yes' : 'No'); // Debug
-
-        if (!csrfToken) {
-            throw new Error('CSRF-Token nicht gefunden');
+        // Hole zuerst einen CSRF-Token
+        const csrfResponse = await fetch('https://fahrschule-backend.up.railway.app/csrf-token', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!csrfResponse.ok) {
+            throw new Error('Fehler beim Abrufen des CSRF-Tokens');
         }
-
+        
+        const csrfData = await csrfResponse.json();
+        
+        // Login-Anfrage mit CSRF-Token
         const response = await fetch('https://fahrschule-backend.up.railway.app/login', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-Token': csrfToken
+                'x-csrf-token': csrfData.csrfToken,
+                'x-session-token': csrfData.sessionToken
             },
             body: JSON.stringify({ username, password })
         });
         
         const data = await response.json();
-        console.log('Login response:', data); // Debug
         
         if (response.ok) {
             // Speichere Session-Daten mit Login-Zeitpunkt
             const sessionData = {
                 token: data.token,
-                refreshToken: data.refreshToken,
-                username: data.user.username,
-                role: data.user.role,
-                timestamp: Date.now()
+                username: username,
+                role: data.role,
+                timestamp: Date.now(),
+                csrfToken: data.csrfToken,
+                sessionToken: data.sessionToken
             };
             
             // Debug-Ausgabe
@@ -52,9 +56,6 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
             if (!storedSession) {
                 throw new Error('Failed to store session data');
             }
-            
-            // Warte kurz, um sicherzustellen, dass die Session gespeichert wurde
-            await new Promise(resolve => setTimeout(resolve, 100));
             
             // Weiterleitung zum Dashboard
             window.location.href = 'dashboard.html';

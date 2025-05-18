@@ -2,7 +2,18 @@
 let currentWeekOffset = 0;
 const API_BASE_URL = 'https://fahrschule-production.up.railway.app';
 const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 Minuten in Millisekunden
-let refreshTokenTimeout = null;
+
+// Funktion zum Hinzufügen der CSRF-Header
+function getCSRFHeaders() {
+    const session = JSON.parse(localStorage.getItem('session'));
+    if (!session || !session.csrfToken || !session.sessionToken) {
+        throw new Error('Keine gültigen CSRF-Token gefunden');
+    }
+    return {
+        'x-csrf-token': session.csrfToken,
+        'x-session-token': session.sessionToken
+    };
+}
 
 // Funktion zum Überprüfen der Session
 function checkSession() {
@@ -20,20 +31,16 @@ function checkSession() {
         const sessionData = JSON.parse(session);
         console.log('Parsed session data:', sessionData); // Debug
         
-        if (!sessionData.token) {
-            console.log('No token in session data'); // Debug
+        if (!sessionData.token || !sessionData.csrfToken || !sessionData.sessionToken) {
+            console.log('Missing required tokens'); // Debug
             logout();
             return false;
         }
 
         const now = Date.now();
         const lastActivity = sessionData.timestamp || 0;
-        const timeSinceLastActivity = now - lastActivity;
 
-        console.log('Time since last activity:', timeSinceLastActivity); // Debug
-        console.log('Session timeout:', SESSION_TIMEOUT); // Debug
-
-        if (timeSinceLastActivity > SESSION_TIMEOUT) {
+        if (now - lastActivity > SESSION_TIMEOUT) {
             console.log('Session timeout - logging out'); // Debug
             logout();
             return false;
@@ -48,58 +55,6 @@ function checkSession() {
         logout();
         return false;
     }
-}
-
-// Funktion zum Aktualisieren des Access Tokens
-async function refreshAccessToken() {
-    try {
-        const session = JSON.parse(localStorage.getItem('session'));
-        if (!session || !session.refreshToken) {
-            throw new Error('No refresh token available');
-        }
-
-        const csrfToken = document.cookie
-            .split('; ')
-            .find(row => row.startsWith('csrf_token='))
-            ?.split('=')[1];
-
-        if (!csrfToken) {
-            throw new Error('CSRF-Token nicht gefunden');
-        }
-
-        const response = await fetch(`${API_BASE_URL}/refresh-token`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': csrfToken
-            },
-            body: JSON.stringify({ refreshToken: session.refreshToken })
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to refresh token');
-        }
-
-        const data = await response.json();
-        session.token = data.token;
-        session.timestamp = Date.now();
-        localStorage.setItem('session', JSON.stringify(session));
-
-        // Setze den Timer für die nächste Token-Aktualisierung
-        scheduleTokenRefresh();
-    } catch (error) {
-        console.error('Token refresh error:', error);
-        logout();
-    }
-}
-
-// Funktion zum Planen der Token-Aktualisierung
-function scheduleTokenRefresh() {
-    if (refreshTokenTimeout) {
-        clearTimeout(refreshTokenTimeout);
-    }
-    // Aktualisiere den Token 5 Minuten vor Ablauf
-    refreshTokenTimeout = setTimeout(refreshAccessToken, 25 * 60 * 1000);
 }
 
 // Event-Listener für Benutzeraktivität
@@ -131,9 +86,6 @@ window.addEventListener('load', () => {
     // Überprüfe die Session alle Minute
     setInterval(checkSession, 60000);
     
-    // Plane die erste Token-Aktualisierung
-    scheduleTokenRefresh();
-    
     try {
         const sessionData = JSON.parse(localStorage.getItem('session'));
         console.log('Session data for initialization:', sessionData); // Debug
@@ -152,36 +104,10 @@ window.addEventListener('load', () => {
     }
 });
 
-async function logout() {
-    try {
-        const session = JSON.parse(localStorage.getItem('session'));
-        if (session && session.token) {
-            const csrfToken = document.cookie
-                .split('; ')
-                .find(row => row.startsWith('csrf_token='))
-                ?.split('=')[1];
-
-            if (csrfToken) {
-                await fetch(`${API_BASE_URL}/logout`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${session.token}`,
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': csrfToken
-                    }
-                });
-            }
-        }
-    } catch (error) {
-        console.error('Logout error:', error);
-    } finally {
-        console.log('Logging out, clearing session'); // Debug
-        localStorage.removeItem('session');
-        if (refreshTokenTimeout) {
-            clearTimeout(refreshTokenTimeout);
-        }
-        window.location.href = 'index.html';
-    }
+function logout() {
+    console.log('Logging out, clearing session'); // Debug output
+    localStorage.removeItem('session');
+    window.location.href = 'index.html';
 }
 
 function formatDate(date) {
@@ -220,7 +146,8 @@ async function fetchAppointments(startDate, endDate) {
             headers: {
                 'Authorization': `Bearer ${session.token}`,
                 'Content-Type': 'application/json',
-                'Accept': 'application/json'
+                'Accept': 'application/json',
+                ...getCSRFHeaders()
             },
             mode: 'cors'
         });
@@ -391,7 +318,8 @@ async function handleAppointmentResponse(appointmentId, newStatus) {
             headers: {
                 'Authorization': `Bearer ${session.token}`,
                 'Content-Type': 'application/json',
-                'Accept': 'application/json'
+                'Accept': 'application/json',
+                ...getCSRFHeaders()
             },
             mode: 'cors'
         });
