@@ -3,18 +3,6 @@ let currentWeekOffset = 0;
 const API_BASE_URL = 'https://fahrschule-production.up.railway.app';
 const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 Minuten in Millisekunden
 
-// Funktion zum Hinzufügen der CSRF-Header
-function getCSRFHeaders() {
-    const session = JSON.parse(localStorage.getItem('session'));
-    if (!session || !session.csrfToken || !session.sessionToken) {
-        throw new Error('Keine gültigen CSRF-Token gefunden');
-    }
-    return {
-        'x-csrf-token': session.csrfToken,
-        'x-session-token': session.sessionToken
-    };
-}
-
 // Funktion zum Überprüfen der Session
 function checkSession() {
     console.log('Checking session...'); // Debug
@@ -31,8 +19,8 @@ function checkSession() {
         const sessionData = JSON.parse(session);
         console.log('Parsed session data:', sessionData); // Debug
         
-        if (!sessionData.token || !sessionData.csrfToken || !sessionData.sessionToken) {
-            console.log('Missing required tokens'); // Debug
+        if (!sessionData.token) {
+            console.log('Missing required token'); // Debug
             logout();
             return false;
         }
@@ -146,8 +134,7 @@ async function fetchAppointments(startDate, endDate) {
             headers: {
                 'Authorization': `Bearer ${session.token}`,
                 'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                ...getCSRFHeaders()
+                'Accept': 'application/json'
             },
             mode: 'cors'
         });
@@ -318,8 +305,7 @@ async function handleAppointmentResponse(appointmentId, newStatus) {
             headers: {
                 'Authorization': `Bearer ${session.token}`,
                 'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                ...getCSRFHeaders()
+                'Accept': 'application/json'
             },
             mode: 'cors'
         });

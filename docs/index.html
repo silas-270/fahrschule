@@ -149,26 +149,10 @@
             const password = document.getElementById('password').value;
 
             try {
-                // Hole zuerst einen CSRF-Token
-                const csrfResponse = await fetch(`${API_URL}/csrf-token`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-                
-                if (!csrfResponse.ok) {
-                    throw new Error('Fehler beim Abrufen des CSRF-Tokens');
-                }
-                
-                const csrfData = await csrfResponse.json();
-
                 const response = await fetch(`${API_URL}/login`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'x-csrf-token': csrfData.csrfToken,
-                        'x-session-token': csrfData.sessionToken
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({ username, password })
                 });
@@ -182,9 +166,7 @@
                         username: username,
                         role: data.role,
                         token: data.token,
-                        timestamp: Date.now(),
-                        csrfToken: data.csrfToken,
-                        sessionToken: data.sessionToken
+                        timestamp: Date.now()
                     };
                     
                     console.log('Storing session data:', sessionData); // Debug output

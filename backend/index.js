@@ -3,48 +3,14 @@ import bcrypt from 'bcrypt';
 import cors from 'cors';
 import { openDb } from './db.js';
 import jwt from 'jsonwebtoken';
-import crypto from 'crypto';
 
 const app = express();
-
-// CSRF-Token Store (in Produktion sollte dies in einer Datenbank gespeichert werden)
-const csrfTokens = new Map();
-
-// CSRF-Token Generierung
-function generateCSRFToken() {
-    return crypto.randomBytes(32).toString('hex');
-}
-
-// CSRF-Token Middleware
-const csrfProtection = (req, res, next) => {
-    // CSRF-Token nur für POST, PUT, DELETE Anfragen prüfen
-    if (['POST', 'PUT', 'DELETE'].includes(req.method)) {
-        const csrfToken = req.headers['x-csrf-token'];
-        const sessionToken = req.headers['x-session-token'];
-
-        if (!csrfToken || !sessionToken) {
-            return res.status(403).json({
-                success: false,
-                message: 'CSRF-Token fehlt'
-            });
-        }
-
-        const storedToken = csrfTokens.get(sessionToken);
-        if (!storedToken || storedToken !== csrfToken) {
-            return res.status(403).json({
-                success: false,
-                message: 'Ungültiger CSRF-Token'
-            });
-        }
-    }
-    next();
-};
 
 // CORS-Konfiguration
 const corsOptions = {
     origin: '*', // In Produktion sollte dies auf deine spezifische Domain beschränkt werden
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'admin-token', 'x-csrf-token', 'x-session-token'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'admin-token'],
     credentials: true
 };
 
@@ -260,21 +226,6 @@ app.post('/register', async (req, res) => {
     }
 });
 
-// CSRF-Token Route
-app.get('/csrf-token', (req, res) => {
-    const sessionToken = crypto.randomBytes(32).toString('hex');
-    const csrfToken = generateCSRFToken();
-    
-    // Token für 1 Stunde speichern
-    csrfTokens.set(sessionToken, csrfToken);
-    setTimeout(() => csrfTokens.delete(sessionToken), 3600000);
-    
-    res.json({
-        csrfToken,
-        sessionToken
-    });
-});
-
 // Login-Route
 app.post('/login', async (req, res) => {
     try {
@@ -299,12 +250,6 @@ app.post('/login', async (req, res) => {
             return res.status(401).json({ message: 'Ungültige Anmeldedaten' });
         }
 
-        // CSRF-Token generieren
-        const sessionToken = crypto.randomBytes(32).toString('hex');
-        const csrfToken = generateCSRFToken();
-        csrfTokens.set(sessionToken, csrfToken);
-        setTimeout(() => csrfTokens.delete(sessionToken), 3600000);
-
         // JWT Token generieren
         const token = jwt.sign(
             { id: user.id, username: user.username, role: user.role },
@@ -314,8 +259,6 @@ app.post('/login', async (req, res) => {
 
         res.json({
             token,
-            csrfToken,
-            sessionToken,
             role: user.role
         });
     } catch (error) {
@@ -323,9 +266,6 @@ app.post('/login', async (req, res) => {
         res.status(500).json({ message: 'Ein Fehler ist aufgetreten' });
     }
 });
-
-// CSRF-Schutz für alle relevanten Routen
-app.use(csrfProtection);
 
 // Admin-Routen
 // Alle Benutzer auflisten

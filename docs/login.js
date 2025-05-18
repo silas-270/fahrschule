@@ -5,33 +5,16 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
     const password = document.getElementById('password').value;
     
     try {
-        // Hole zuerst einen CSRF-Token
-        const csrfResponse = await fetch('https://fahrschule-backend.up.railway.app/csrf-token', {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        if (!csrfResponse.ok) {
-            throw new Error('Fehler beim Abrufen des CSRF-Tokens');
-        }
-        
-        const csrfData = await csrfResponse.json();
-        
-        // Login-Anfrage mit CSRF-Token
         const response = await fetch('https://fahrschule-backend.up.railway.app/login', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'x-csrf-token': csrfData.csrfToken,
-                'x-session-token': csrfData.sessionToken
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({ username, password })
         });
         
         const data = await response.json();
-        console.log('Login response:', data); // Debug-Ausgabe
+        console.log('Login response:', data);
         
         if (response.ok) {
             // Speichere Session-Daten mit Login-Zeitpunkt
@@ -39,9 +22,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
                 token: data.token,
                 username: username,
                 role: data.role,
-                timestamp: Date.now(),
-                csrfToken: data.csrfToken,
-                sessionToken: data.sessionToken
+                timestamp: Date.now()
             };
             
             // Debug-Ausgabe
