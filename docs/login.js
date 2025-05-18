@@ -31,6 +31,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
         });
         
         const data = await response.json();
+        console.log('Login response:', data); // Debug-Ausgabe
         
         if (response.ok) {
             // Speichere Session-Daten mit Login-Zeitpunkt

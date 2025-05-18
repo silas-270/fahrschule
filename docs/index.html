@@ -149,31 +149,43 @@
             const password = document.getElementById('password').value;
 
             try {
+                // Hole zuerst einen CSRF-Token
+                const csrfResponse = await fetch(`${API_URL}/csrf-token`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!csrfResponse.ok) {
+                    throw new Error('Fehler beim Abrufen des CSRF-Tokens');
+                }
+                
+                const csrfData = await csrfResponse.json();
+
                 const response = await fetch(`${API_URL}/login`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'x-csrf-token': csrfData.csrfToken,
+                        'x-session-token': csrfData.sessionToken
                     },
                     body: JSON.stringify({ username, password })
                 });
 
                 const data = await response.json();
+                console.log('Login response:', data); // Debug output
                 
                 if (response.ok) {
-                    console.log('Login response:', data); // Debug output
-                    
                     // Speichere Session-Informationen
                     const sessionData = {
-                        username: data.user.username,
-                        role: data.user.role,
+                        username: username,
+                        role: data.role,
                         token: data.token,
-                        timestamp: Date.now()
+                        timestamp: Date.now(),
+                        csrfToken: data.csrfToken,
+                        sessionToken: data.sessionToken
                     };
-
-                    // Wenn Admin-Token vorhanden, speichere ihn
-                    if (data.adminToken) {
-                        sessionData.adminToken = data.adminToken;
-                    }
                     
                     console.log('Storing session data:', sessionData); // Debug output
                     localStorage.setItem('session', JSON.stringify(sessionData));
@@ -181,7 +193,7 @@
                     showMessage('Login erfolgreich! Weiterleitung...');
                     setTimeout(() => {
                         // Prüfe die Benutzerrolle
-                        if (data.user.role === 'admin') {
+                        if (data.role === 'admin') {
                             window.location.href = 'admin-dashboard.html';
                         } else {
                             window.location.href = 'dashboard.html';
