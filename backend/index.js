@@ -23,8 +23,7 @@ const corsOptions = {
     origin: process.env.FRONTEND_URL || 'http://localhost:3000',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
-    credentials: true,
-    optionsSuccessStatus: 200
+    credentials: true
 };
 
 app.use(cors(corsOptions));
@@ -41,18 +40,16 @@ if (!JWT_SECRET || !JWT_REFRESH_SECRET) {
     process.exit(1);
 }
 
-// Debug Middleware für alle Anfragen
+// Logging Middleware
 app.use((req, res, next) => {
     console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
-    console.log('Headers:', req.headers);
-    console.log('Body:', req.body);
     next();
 });
 
 // Error Handling Middleware
 app.use(errorLogger);
 app.use((err, req, res, next) => {
-    console.error('Error details:', err);
+    console.error('Fehler:', err);
     res.status(500).json({
         success: false,
         message: 'Ein interner Fehler ist aufgetreten',
@@ -62,13 +59,12 @@ app.use((err, req, res, next) => {
 
 // CSRF Token Middleware
 app.use((req, res, next) => {
-    // Setze CSRF-Token für alle Anfragen, die keine POST/PUT/DELETE sind
-    if (!['POST', 'PUT', 'DELETE'].includes(req.method)) {
+    if (req.method === 'GET') {
         const csrfToken = generateCSRFToken();
         res.cookie('csrf_token', csrfToken, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax'  // Ändern von 'strict' zu 'lax' für bessere Kompatibilität
+            sameSite: 'strict'
         });
     }
     next();
@@ -256,46 +252,26 @@ app.post('/register', async (req, res) => {
 // Login-Route mit Refresh Token
 app.post('/login', async (req, res) => {
     try {
-        console.log('Login request received:', req.body);
-        
-        if (!req.body || !req.body.username || !req.body.password) {
-            console.log('Invalid request body:', req.body);
-            return res.status(400).json({
-                success: false,
-                message: 'Benutzername und Passwort sind erforderlich'
-            });
-        }
-
         const { username, password } = req.body;
         
         // Input sanitization
         const sanitizedUsername = sanitizeInput(username);
         const sanitizedPassword = sanitizeInput(password);
         
-        console.log('Login attempt for user:', sanitizedUsername);
-        
         const db = await openDb();
         const user = await db.get('SELECT * FROM users WHERE username = $1', [sanitizedUsername]);
         
         if (!user) {
-            console.log('User not found:', sanitizedUsername);
-            return res.status(401).json({
-                success: false,
-                message: 'Ungültige Anmeldedaten'
-            });
+            return res.status(401).json({ message: 'Ungültige Anmeldedaten' });
         }
 
         const validPassword = await bcrypt.compare(sanitizedPassword, user.password);
         if (!validPassword) {
-            console.log('Invalid password for user:', sanitizedUsername);
             await db.run(
                 'UPDATE users SET failed_attempts = failed_attempts + 1 WHERE id = $1',
                 [user.id]
             );
-            return res.status(401).json({
-                success: false,
-                message: 'Ungültige Anmeldedaten'
-            });
+            return res.status(401).json({ message: 'Ungültige Anmeldedaten' });
         }
 
         // Reset failed attempts
@@ -319,9 +295,7 @@ app.post('/login', async (req, res) => {
             [refreshToken, user.id]
         );
 
-        console.log('Login successful for user:', user.username);
-
-        const response = {
+        res.json({
             success: true,
             token: accessToken,
             refreshToken: refreshToken,
@@ -330,16 +304,12 @@ app.post('/login', async (req, res) => {
                 username: user.username,
                 role: user.role
             }
-        };
-
-        console.log('Sending response:', response);
-        res.json(response);
+        });
     } catch (error) {
         console.error('Login error:', error);
         res.status(500).json({
             success: false,
-            message: 'Ein Fehler ist aufgetreten',
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+            message: 'Ein Fehler ist aufgetreten'
         });
     }
 });

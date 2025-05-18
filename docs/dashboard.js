@@ -28,8 +28,12 @@ function checkSession() {
 
         const now = Date.now();
         const lastActivity = sessionData.timestamp || 0;
+        const timeSinceLastActivity = now - lastActivity;
 
-        if (now - lastActivity > SESSION_TIMEOUT) {
+        console.log('Time since last activity:', timeSinceLastActivity); // Debug
+        console.log('Session timeout:', SESSION_TIMEOUT); // Debug
+
+        if (timeSinceLastActivity > SESSION_TIMEOUT) {
             console.log('Session timeout - logging out'); // Debug
             logout();
             return false;
