@@ -250,20 +250,42 @@ app.post('/login', async (req, res) => {
             return res.status(401).json({ message: 'Ungültige Anmeldedaten' });
         }
 
+        // Fehlgeschlagene Anmeldeversuche zurücksetzen
+        await db.run(
+            'UPDATE users SET failed_attempts = 0, last_login = CURRENT_TIMESTAMP WHERE id = $1',
+            [user.id]
+        );
+
         // JWT Token generieren
         const token = jwt.sign(
-            { id: user.id, username: user.username, role: user.role },
+            { 
+                id: user.id, 
+                username: user.username,
+                role: user.role 
+            },
             JWT_SECRET,
             { expiresIn: '24h' }
         );
 
-        res.json({
+        // Wenn der Benutzer ein Admin ist, füge den Admin-Token hinzu
+        const responseData = {
+            message: 'Login erfolgreich',
             token,
-            role: user.role
-        });
+            user: {
+                id: user.id,
+                username: user.username,
+                role: user.role
+            }
+        };
+
+        if (user.role === 'admin') {
+            responseData.adminToken = ADMIN_TOKEN;
+        }
+
+        res.json(responseData);
     } catch (error) {
         console.error('Login error:', error);
-        res.status(500).json({ message: 'Ein Fehler ist aufgetreten' });
+        res.status(500).json({ message: 'Interner Serverfehler' });
     }
 });
 

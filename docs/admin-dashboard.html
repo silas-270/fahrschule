@@ -674,13 +674,14 @@
         // Hilfsfunktion für Admin-Anfragen
         async function adminRequest(endpoint, method = 'GET', body = null) {
             const session = JSON.parse(localStorage.getItem('session'));
-            if (!session || !session.token) {
-                throw new Error('Keine gültige Session gefunden');
+            if (!session || session.role !== 'admin' || !session.adminToken) {
+                throw new Error('Nicht autorisiert');
             }
 
             const headers = {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${session.token}`
+                'Authorization': `Bearer ${session.token}`,
+                'admin-token': session.adminToken
             };
 
             const options = {
@@ -693,20 +694,11 @@
             }
 
             const response = await fetch(`${API_URL}${endpoint}`, options);
-            
-            if (response.status === 401) {
-                // Token ist abgelaufen oder ungültig
-                localStorage.removeItem('session');
-                window.location.href = 'index.html';
-                throw new Error('Session abgelaufen. Bitte erneut anmelden.');
-            }
-
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.message || 'Ein Fehler ist aufgetreten');
+                throw new Error('Anfrage fehlgeschlagen');
             }
 
-            return response.json();
+            return await response.json();
         }
 
         // Sidebar Toggle

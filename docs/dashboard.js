@@ -20,7 +20,7 @@ function checkSession() {
         console.log('Parsed session data:', sessionData); // Debug
         
         if (!sessionData.token) {
-            console.log('Missing required token'); // Debug
+            console.log('No token in session data'); // Debug
             logout();
             return false;
         }

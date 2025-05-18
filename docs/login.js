@@ -14,14 +14,13 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
         });
         
         const data = await response.json();
-        console.log('Login response:', data);
         
         if (response.ok) {
             // Speichere Session-Daten mit Login-Zeitpunkt
             const sessionData = {
                 token: data.token,
                 username: username,
-                role: data.role,
+                role: data.role || 'student',
                 timestamp: Date.now()
             };
             
