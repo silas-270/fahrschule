@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fahrlehrer Dashboard - Fahrspur 24</title>
+    <link rel="icon" href="assets/img/favicon.ico" type="image/x-icon">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/admin-dashboard.css">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>Fahrlehrer Dashboard</h1>
+            <button class="logout-btn" onclick="logout()">Logout <span class="material-icons">logout</span></button>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="sidebar" id="sidebar">
+            <button class="sidebar-toggle" onclick="toggleSidebar()">
+                <span class="material-icons">chevron_right</span>
+            </button>
+            <button class="add-user-button" onclick="openNewUserDialog()">
+                <span class="material-icons">person_add</span>
+                <span class="button-text">Neuer Benutzer</span>
+            </button>
+            <div class="user-list" id="userList">
+                <!-- Benutzer werden hier dynamisch eingefügt -->
+            </div>
+        </div>
+
+        <div class="main-content" id="mainContent">
+            <div class="calendar">
+                <div class="calendar-header">
+                    <div class="calendar-nav">
+                        <button onclick="previousWeek()" title="Vorherige Woche">
+                            <span class="material-icons">chevron_left</span>
+                        </button>
+                        <h2 id="currentWeek">Woche vom 13.05.2024</h2>
+                        <button onclick="nextWeek()" title="Nächste Woche">
+                            <span class="material-icons">chevron_right</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="calendar-grid" id="calendarGrid">
+                    <!-- Kalendertage werden hier dynamisch eingefügt -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dialog für Benutzereinstellungen -->
+    <div class="dialog-overlay" id="userSettingsDialog">
+        <div class="dialog">
+            <div class="dialog-header">
+                <h3 class="dialog-title" id="userSettingsTitle">Benutzer bearbeiten</h3>
+                <button class="dialog-close" onclick="closeDialog('userSettingsDialog')">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <div class="dialog-content">
+                <div class="dialog-section">
+                    <h4 class="dialog-section-title">Passwort ändern</h4>
+                    <div class="form-group">
+                        <label for="newPassword">Neues Passwort</label>
+                        <input type="password" id="newPassword" placeholder="Mindestens 8 Zeichen">
+                    </div>
+                    <button class="dialog-button primary" onclick="changePassword()">Passwort ändern</button>
+                </div>
+                <div class="dialog-section">
+                    <h4 class="dialog-section-title">Benutzer löschen</h4>
+                    <p style="margin-bottom: 1rem; opacity: 0.9;">Achtung: Diese Aktion kann nicht rückgängig gemacht werden.</p>
+                    <button class="dialog-button danger" onclick="deleteUser()">Benutzer löschen</button>
+                </div>
+            </div>
+            <div class="dialog-actions">
+                <button class="dialog-button secondary" onclick="closeDialog('userSettingsDialog')">Schließen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dialog für Terminerstellung -->
+    <div class="dialog-overlay" id="createAppointmentDialog">
+        <div class="dialog">
+            <div class="dialog-header">
+                <h3 class="dialog-title" id="createAppointmentTitle">Termin erstellen</h3>
+                <button class="dialog-close" onclick="closeDialog('createAppointmentDialog')">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <div class="dialog-content">
+                <div class="title-row">
+                    <div class="form-group">
+                        <label for="appointmentTitle">Titel</label>
+                        <input type="text" id="appointmentTitle" placeholder="z.B. Überland">
+                    </div>
+                    <div class="form-group">
+                        <label for="appointmentDuration">Dauer</label>
+                        <input type="text" id="appointmentDuration" placeholder="z.B. 90min">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="appointmentDate">Datum</label>
+                    <input type="date" id="appointmentDate">
+                </div>
+                <div class="form-group">
+                    <label>Uhrzeit</label>
+                    <div class="time-inputs">
+                        <input type="number" id="appointmentHour" min="0" max="23" placeholder="00">
+                        <span>:</span>
+                        <input type="number" id="appointmentMinute" min="0" max="59" placeholder="00">
+                    </div>
+                </div>
+            </div>
+            <div class="dialog-actions">
+                <button class="dialog-button secondary" onclick="closeDialog('createAppointmentDialog')">Abbrechen</button>
+                <button class="dialog-button primary" onclick="saveAppointment()">Erstellen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dialog für neuen Benutzer -->
+    <div class="dialog-overlay" id="newUserDialog">
+        <div class="dialog">
+            <div class="dialog-header">
+                <h3 class="dialog-title">Neuen Benutzer erstellen</h3>
+                <button class="dialog-close" onclick="closeDialog('newUserDialog')">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <div class="dialog-content">
+                <form id="newUserForm" onsubmit="event.preventDefault(); createNewUser();">
+                    <div class="form-group">
+                        <label for="newUsername">Benutzername</label>
+                        <input type="text" id="newUsername" name="username" placeholder="Benutzername eingeben" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="newPassword">Passwort</label>
+                        <input type="password" id="newPassword" name="password" placeholder="Mindestens 8 Zeichen" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirmPassword">Passwort bestätigen</label>
+                        <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Passwort wiederholen" required>
+                    </div>
+                    <div class="dialog-actions">
+                        <button type="button" class="dialog-button secondary" onclick="closeDialog('newUserDialog')">Abbrechen</button>
+                        <button type="submit" class="dialog-button primary">Erstellen</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script src="assets/js/config.js"></script>
+    <script src="pages/cookie-banner.js"></script>
+    <script src="assets/js/admin-dashboard.js"></script>
+</body>
+</html> 
