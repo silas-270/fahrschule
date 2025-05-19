@@ -1,0 +1,24 @@
+:root {
+  --background: #212121;
+  --text: #F3F3F3;
+  --container: #303030;
+  
+  /* Common UI Elements */
+  --input-bg: #424242;
+  --input-border: #4f4f4f;
+  --input-focus-bg: #484848;
+  --input-focus-border: #90CAF9;
+  --placeholder: #9E9E9E;
+  
+  /* Status Colors */
+  --success: #4CAF50;
+  --error: #F44336;
+  --info: #2196F3;
+  --warning: #FFC107;
+  
+  /* Interactive Elements */
+  --secondary-text: #BDBDBD;
+  
+  /* Borders and Dividers */
+  --hover-bg: #363636;
+}

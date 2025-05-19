@@ -1,7 +1,7 @@
 # Fahrspur 24 - Fahrschulverwaltungssystem
 
 ## Projektübersicht
-Fahrspur 24 ist ein modernes Fahrschulverwaltungssystem, das Fahrlehrern und Fahrschülern eine effiziente Terminverwaltung und Kommunikation ermöglicht.
+Fahrspur 24 ist ein modernes Fahrschulverwaltungssystem, das Fahrlehrern und Fahrschülern eine effiziente Terminverwaltung und Kommunikation ermöglicht. Das System bietet eine intuitive Benutzeroberfläche und robuste Backend-Funktionalitäten für die Verwaltung von Fahrschulbetrieben.
 
 ## Technische Dokumentation
 
@@ -9,7 +9,9 @@ Fahrspur 24 ist ein modernes Fahrschulverwaltungssystem, das Fahrlehrern und Fah
 - Frontend: HTML5, CSS3, JavaScript (Vanilla)
 - Backend: Node.js mit Express
 - Datenbank: PostgreSQL
-- Hosting: Railway.app
+- Authentifizierung: JWT (JSON Web Tokens)
+- Sicherheit: bcrypt für Passwort-Hashing
+- Umgebungsvariablen: dotenv für Konfigurationsmanagement
 
 ### Verzeichnisstruktur
 ```
@@ -18,38 +20,54 @@ fahrschule/
 │   ├── index.html          # Login-Seite
 │   ├── dashboard.html      # Fahrschüler-Dashboard
 │   ├── admin-dashboard.html # Fahrlehrer-Dashboard
-│   ├── impressum.html      # Impressum
-│   ├── datenschutz.html    # Datenschutzerklärung
-│   ├── cookie-banner.js    # Cookie-Banner Funktionalität
-│   └── dashboard.js        # Dashboard Funktionalität
-├── server/                 # Backend-Code
-│   ├── index.js           # Hauptanwendung
-│   ├── routes/            # API-Routen
-│   ├── models/            # Datenbankmodelle
-│   └── middleware/        # Middleware-Funktionen
-└── README.md              # Diese Dokumentation
+│   ├── assets/            # Statische Assets
+│   └── pages/             # Weitere Frontend-Seiten
+├── backend/               # Backend-Code
+│   ├── index.js          # Hauptanwendung
+│   ├── db.js             # Datenbank-Konfiguration
+│   └── routes/           # API-Routen
+├── package.json          # Projekt-Konfiguration
+├── package-lock.json     # Abhängigkeits-Lockfile
+└── README.md             # Diese Dokumentation
 ```
+
+### Abhängigkeiten
+- express: ^4.18.2 - Web-Framework
+- bcrypt: ^5.1.1 - Passwort-Hashing
+- cors: ^2.8.5 - Cross-Origin Resource Sharing
+- dotenv: ^16.5.0 - Umgebungsvariablen-Management
+- jsonwebtoken: ^9.0.2 - JWT-Authentifizierung
+- pg: ^8.11.3 - PostgreSQL Client
 
 ### Frontend-Komponenten
 
-#### Cookie-Banner
-- Implementiert in `cookie-banner.js`
-- Erscheint beim ersten Besuch der Website
-- Speichert Zustimmung im localStorage
-- Verlinkt zur Datenschutzerklärung
+#### Dashboard
+- Implementiert in `dashboard.html`
+- Benutzerfreundliche Oberfläche für Fahrschüler
+- Terminübersicht und -verwaltung
+- Kommunikationsfunktionen
+- Responsive Design für mobile Nutzung
 
-#### Rechtliche Seiten
-1. **Impressum** (`impressum.html`)
-   - Pflichtangaben gemäß § 5 TMG
-   - Kontaktdaten
-   - Verantwortlichkeiten
-   - Haftungsausschlüsse
+#### Admin-Dashboard
+- Implementiert in `admin-dashboard.html`
+- Erweiterte Funktionen für Fahrlehrer
+- Benutzerverwaltung
+- Terminplanung und -verwaltung
+- Statistiken und Berichte
 
-2. **Datenschutzerklärung** (`datenschutz.html`)
-   - DSGVO-konforme Datenschutzerklärung
-   - Cookie-Informationen
-   - Nutzerrechte
-   - Kontaktdaten
+### Backend-Funktionalitäten
+
+#### Authentifizierung
+- JWT-basierte Authentifizierung
+- Sichere Passwort-Hashing mit bcrypt
+- Benutzerrollen (Fahrschüler/Fahrlehrer)
+- Session-Management
+
+#### Datenbank
+- PostgreSQL für Produktionsumgebung
+- Benutzer- und Terminverwaltung
+- Optimierte Datenbankabfragen
+- Datenbank-Migrations-System
 
 ### Design-System
 
@@ -59,59 +77,56 @@ fahrschule/
 - Container: #303030 (Mittelgrau)
 - Text: #F3F3F3 (Weiß)
 - Sekundärtext: #BDBDBD (Hellgrau)
+- Akzentfarbe: #FF4081 (Pink)
 
 #### Typografie
 - Schriftart: Roboto
 - Überschriften: 700 (Bold)
 - Normaltext: 400 (Regular)
 - Buttons: 500 (Medium)
+- Responsive Schriftgrößen
 
-#### Komponenten
-1. **Buttons**
-   - Primär: Blau (#2196F3)
-   - Sekundär: Grau (#424242)
-   - Gefahr: Rot (#F44336)
+### Installation und Entwicklung
 
-2. **Container**
-   - Abgerundete Ecken (8px/16px)
-   - Schatten-Effekt
-   - Padding: 1rem/1.5rem
+1. Repository klonen:
+```bash
+git clone https://github.com/silas-270/fahrschule
+cd fahrschule
+```
 
-3. **Formulare**
-   - Einheitliche Input-Styles
-   - Validierungs-Feedback
-   - Responsive Layout
+2. Umgebungsvariablen konfigurieren:
+```bash
+cp .env.example .env
+# Bearbeiten Sie die .env-Datei mit Ihren Konfigurationen
+```
 
-### Wartung und Updates
+3. Abhängigkeiten installieren:
+```bash
+npm install
+```
 
-#### Cookie-Banner
-1. Banner anpassen:
-   - Text in `cookie-banner.js` bearbeiten
-   - Styling in der jeweiligen HTML-Datei anpassen
-
-2. Datenschutzerklärung aktualisieren:
-   - `datenschutz.html` bearbeiten
-   - Neue Datenschutzrichtlinien einarbeiten
-
-#### Rechtliche Seiten
-1. Impressum aktualisieren:
-   - Kontaktdaten in `impressum.html` aktualisieren
-   - Rechtliche Texte bei Bedarf anpassen
-
-2. Datenschutzerklärung aktualisieren:
-   - Neue Datenschutzrichtlinien in `datenschutz.html` einarbeiten
-   - Cookie-Informationen aktualisieren
+4. Entwicklungsserver starten:
+```bash
+npm start
+```
 
 ### Sicherheitshinweise
 1. **Datenschutz**
    - Regelmäßige Überprüfung der Datenschutzerklärung
    - Aktualisierung bei neuen Datenschutzrichtlinien
    - Dokumentation von Datenverarbeitungsprozessen
+   - DSGVO-Konformität
 
-2. **Cookies**
-   - Nur technisch notwendige Cookies verwenden
-   - Cookie-Consent dokumentieren
-   - Regelmäßige Überprüfung der Cookie-Verwendung
+2. **Authentifizierung**
+   - Sichere Passwort-Hashing mit bcrypt
+   - JWT-basierte Session-Verwaltung
+   - CORS-Konfiguration für API-Sicherheit
+   - Rate Limiting für API-Endpunkte
+
+3. **Datenbank**
+   - Regelmäßige Backups
+   - Verschlüsselte Verbindungen
+   - SQL-Injection-Schutz
 
 ### Deployment
 1. Frontend-Änderungen:
@@ -125,13 +140,7 @@ fahrschule/
 2. Backend-Änderungen:
    ```bash
    # Server-Code aktualisieren
-   git add server/
+   git add backend/
    git commit -m "Update backend code"
    git push
    ```
-
-### Kontakt
-Bei technischen Fragen oder Problemen:
-- E-Mail: [E-Mail-Adresse]
-- Telefon: [Telefonnummer]
-- Support-Zeiten: Mo-Fr, 9:00-17:00 Uhr 
