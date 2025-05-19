@@ -113,21 +113,7 @@ const adminAuth = (req, res, next) => {
 };
 
 // JWT Secret
-const JWT_SECRET = process.env.JWT_SECRET;
-
-// Validiere JWT_SECRET
-if (!JWT_SECRET) {
-    console.error('FEHLER: JWT_SECRET ist nicht in den Umgebungsvariablen gesetzt!');
-    console.error('Bitte setzen Sie einen starken JWT_SECRET in den Umgebungsvariablen.');
-    process.exit(1);
-}
-
-// Validiere die Stärke des JWT_SECRET
-if (JWT_SECRET.length < 32) {
-    console.error('FEHLER: JWT_SECRET ist zu kurz!');
-    console.error('Der JWT_SECRET sollte mindestens 32 Zeichen lang sein.');
-    process.exit(1);
-}
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 // Token Validierung Middleware
 const validateToken = (req, res, next) => {

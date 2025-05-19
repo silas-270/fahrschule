@@ -9,8 +9,7 @@ Fahrspur 24 ist ein modernes Fahrschulverwaltungssystem, das Fahrlehrern und Fah
 - Frontend: HTML5, CSS3, JavaScript (Vanilla)
 - Backend: Node.js mit Express
 - Datenbank: PostgreSQL
-- Authentifizierung: JWT (JSON Web Tokens)
-- Sicherheit: bcrypt für Passwort-Hashing
+- Hosting: Railway.app
 
 ### Verzeichnisstruktur
 ```
@@ -19,47 +18,38 @@ fahrschule/
 │   ├── index.html          # Login-Seite
 │   ├── dashboard.html      # Fahrschüler-Dashboard
 │   ├── admin-dashboard.html # Fahrlehrer-Dashboard
-│   ├── assets/            # Statische Assets
-│   └── pages/             # Weitere Frontend-Seiten
-├── backend/               # Backend-Code
-│   ├── index.js          # Hauptanwendung
-│   ├── db.js             # Datenbank-Konfiguration
-│   └── users.db          # SQLite Datenbank (Entwicklung)
-└── README.md             # Diese Dokumentation
+│   ├── impressum.html      # Impressum
+│   ├── datenschutz.html    # Datenschutzerklärung
+│   ├── cookie-banner.js    # Cookie-Banner Funktionalität
+│   └── dashboard.js        # Dashboard Funktionalität
+├── server/                 # Backend-Code
+│   ├── index.js           # Hauptanwendung
+│   ├── routes/            # API-Routen
+│   ├── models/            # Datenbankmodelle
+│   └── middleware/        # Middleware-Funktionen
+└── README.md              # Diese Dokumentation
 ```
-
-### Abhängigkeiten
-- express: ^4.18.2
-- bcrypt: ^5.1.1
-- cors: ^2.8.5
-- jsonwebtoken: ^9.0.2
-- pg: ^8.11.3
 
 ### Frontend-Komponenten
 
-#### Dashboard
-- Implementiert in `dashboard.html`
-- Benutzerfreundliche Oberfläche für Fahrschüler
-- Terminübersicht und -verwaltung
-- Kommunikationsfunktionen
+#### Cookie-Banner
+- Implementiert in `cookie-banner.js`
+- Erscheint beim ersten Besuch der Website
+- Speichert Zustimmung im localStorage
+- Verlinkt zur Datenschutzerklärung
 
-#### Admin-Dashboard
-- Implementiert in `admin-dashboard.html`
-- Erweiterte Funktionen für Fahrlehrer
-- Benutzerverwaltung
-- Terminplanung und -verwaltung
+#### Rechtliche Seiten
+1. **Impressum** (`impressum.html`)
+   - Pflichtangaben gemäß § 5 TMG
+   - Kontaktdaten
+   - Verantwortlichkeiten
+   - Haftungsausschlüsse
 
-### Backend-Funktionalitäten
-
-#### Authentifizierung
-- JWT-basierte Authentifizierung
-- Sichere Passwort-Hashing mit bcrypt
-- Benutzerrollen (Fahrschüler/Fahrlehrer)
-
-#### Datenbank
-- PostgreSQL für Produktionsumgebung
-- SQLite für Entwicklungsumgebung
-- Benutzer- und Terminverwaltung
+2. **Datenschutzerklärung** (`datenschutz.html`)
+   - DSGVO-konforme Datenschutzerklärung
+   - Cookie-Informationen
+   - Nutzerrechte
+   - Kontaktdaten
 
 ### Design-System
 
@@ -76,23 +66,41 @@ fahrschule/
 - Normaltext: 400 (Regular)
 - Buttons: 500 (Medium)
 
-### Installation und Entwicklung
+#### Komponenten
+1. **Buttons**
+   - Primär: Blau (#2196F3)
+   - Sekundär: Grau (#424242)
+   - Gefahr: Rot (#F44336)
 
-1. Repository klonen:
-```bash
-git clone [repository-url]
-cd fahrschule
-```
+2. **Container**
+   - Abgerundete Ecken (8px/16px)
+   - Schatten-Effekt
+   - Padding: 1rem/1.5rem
 
-2. Abhängigkeiten installieren:
-```bash
-npm install
-```
+3. **Formulare**
+   - Einheitliche Input-Styles
+   - Validierungs-Feedback
+   - Responsive Layout
 
-3. Entwicklungsserver starten:
-```bash
-npm start
-```
+### Wartung und Updates
+
+#### Cookie-Banner
+1. Banner anpassen:
+   - Text in `cookie-banner.js` bearbeiten
+   - Styling in der jeweiligen HTML-Datei anpassen
+
+2. Datenschutzerklärung aktualisieren:
+   - `datenschutz.html` bearbeiten
+   - Neue Datenschutzrichtlinien einarbeiten
+
+#### Rechtliche Seiten
+1. Impressum aktualisieren:
+   - Kontaktdaten in `impressum.html` aktualisieren
+   - Rechtliche Texte bei Bedarf anpassen
+
+2. Datenschutzerklärung aktualisieren:
+   - Neue Datenschutzrichtlinien in `datenschutz.html` einarbeiten
+   - Cookie-Informationen aktualisieren
 
 ### Sicherheitshinweise
 1. **Datenschutz**
@@ -100,10 +108,10 @@ npm start
    - Aktualisierung bei neuen Datenschutzrichtlinien
    - Dokumentation von Datenverarbeitungsprozessen
 
-2. **Authentifizierung**
-   - Sichere Passwort-Hashing mit bcrypt
-   - JWT-basierte Session-Verwaltung
-   - CORS-Konfiguration für API-Sicherheit
+2. **Cookies**
+   - Nur technisch notwendige Cookies verwenden
+   - Cookie-Consent dokumentieren
+   - Regelmäßige Überprüfung der Cookie-Verwendung
 
 ### Deployment
 1. Frontend-Änderungen:
@@ -117,7 +125,7 @@ npm start
 2. Backend-Änderungen:
    ```bash
    # Server-Code aktualisieren
-   git add backend/
+   git add server/
    git commit -m "Update backend code"
    git push
    ```
