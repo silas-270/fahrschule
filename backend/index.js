@@ -4,7 +4,7 @@ import cors from 'cors';
 import { openDb } from './db.js';
 import jwt from 'jsonwebtoken';
 
-const ap = express();
+const app = express();
 
 // CORS-Konfiguration
 const corsOptions = {
